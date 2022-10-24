@@ -1,0 +1,20 @@
+node_modules
+node_modules/
+
+# development
+local
+data
+
+# production
+/build
+/frontend/build
+
+.nyc_output/
+
+# misc
+.DS_Store
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
