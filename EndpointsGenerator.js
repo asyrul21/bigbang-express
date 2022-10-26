@@ -278,24 +278,23 @@ const moduleFn = function () {
       };
       return this;
     },
-    configureRoutesFor: function (entity, config = {}) {
-      if (
-        !entityConfigurations ||
-        Object.keys(entityConfigurations).length === 0
-      ) {
+    configureRoutes: function (routesConfig = {}) {
+      validateMethodChainEntityForMethod("configureRoutes");
+      if (!routesConfig || Object.keys(routesConfig).length === 0) {
         throw new Error(
-          "Entities should be configured first before module method [configureRoutesFor] is called."
+          "Argument parameter [routesConfig] is required for module method [configureRoutes]."
         );
       }
-      validateEntityForMethod(entity, "configureRoutesFor");
-      if (config && Object.keys(config).length > 0) {
-        // TODO verify structure of config
-        routeConfigurations[entity] = { ...config };
-      } else {
-        throw new Error(
-          "Argument parameter [config] is required for module method [configureRoutesFor]."
-        );
-      }
+      // TODO verify structure of config
+
+      entityConfigurations = {
+        ...entityConfigurations,
+        [entityBeingConfigured]: {
+          ...entityConfigurations[entityBeingConfigured],
+          routes: { ...routesConfig },
+        },
+      };
+      return this;
     },
     // prepareAppConstruction: function (
     //   app,

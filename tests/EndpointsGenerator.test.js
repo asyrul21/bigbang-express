@@ -593,52 +593,74 @@ describe("Endpoints Generator: Configuring Entity Dependents", () => {
   });
 });
 
-// describe("Endpoints Generator: Configuring Entity Routes", () => {
-//   beforeEach(() => {
-//     EndpointsGenerator._resetModule();
-//   });
+describe("Endpoints Generator: Configuring Entity Routes", () => {
+  beforeEach(() => {
+    EndpointsGenerator._resetModule();
+  });
 
-//   // configureRoutesFor is optional. If not called it will auto generate for you
-//   it("should add entity configuration successfully when supplied with a full config", () => {
-//     const sampleConfiguration = {
-//       [ACTIONS.findMany]: {
-//         middlewares: [],
-//         auth: authOptions.false,
-//       },
-//       [ACTIONS.findById]: {
-//         middlewares: [],
-//         auth: authOptions.false,
-//       },
-//       [ACTIONS.createOne]: {
-//         middlewares: [],
-//         auth: authOptions.adminOnly,
-//       },
-//       [ACTIONS.updateOne]: {
-//         middlewares: [],
-//         auth: authOptions.adminOnly,
-//       },
-//       [ACTIONS.deleteOne]: {
-//         middlewares: [],
-//         auth: authOptions.adminOnly,
-//       },
-//     };
-//     const expected = {
-//       users: { ...sampleConfiguration },
-//     };
-//     let error = null;
-//     let result = null;
-//     try {
-//       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users);
-//       EndpointsGenerator.configureRoutesFor("users", sampleConfiguration);
-//       result = EndpointsGenerator.getRouteConfigurations();
-//     } catch (e) {
-//       console.log(e);
-//       error = e;
-//     }
-//     assert.equal(error, null);
-//     assert.deepStrictEqual(expected, result);
-//   });
-// });
+  it("should throw error when configureRoutes is called without first calling configureEntity", () => {
+    let error = null;
+    try {
+      EndpointsGenerator.configureRoutes("categories", {
+        sample: "test",
+      });
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.notEqual(error, null);
+  });
+
+  // configureRoutesFor is optional. If not called it will auto generate for you
+  it("should add entity configuration successfully when supplied with a full config", () => {
+    const sampleConfiguration = {
+      [ACTIONS.findMany]: {
+        middlewares: [],
+        auth: authOptions.false,
+      },
+      [ACTIONS.findById]: {
+        middlewares: [],
+        auth: authOptions.false,
+      },
+      [ACTIONS.createOne]: {
+        middlewares: [],
+        auth: authOptions.adminOnly,
+      },
+      [ACTIONS.updateOne]: {
+        middlewares: [],
+        auth: authOptions.adminOnly,
+      },
+      [ACTIONS.deleteOne]: {
+        middlewares: [],
+        auth: authOptions.adminOnly,
+      },
+    };
+    const expected = {
+      users: {
+        name: "users",
+        identifierField: "id",
+        isPrimaryEntity: true,
+        isAdminCallback: null,
+        routes: {
+          ...sampleConfiguration,
+        },
+      },
+    };
+    let error = null;
+    let result = null;
+    try {
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
+        isPrimaryEntity: true,
+      }).configureRoutes(sampleConfiguration);
+      result = EndpointsGenerator.getEntityConfigurations();
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.equal(error, null);
+    assert.deepStrictEqual(expected, result);
+  });
+});
 
 // describe("Endpoints Generator: App Preparation", () => {
 //   it("should throw error when invalid app parameter is passed", () => {
