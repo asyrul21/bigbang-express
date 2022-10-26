@@ -25,19 +25,6 @@ const moduleFn = function () {
    */
   let entityBeingConfigured = null;
 
-  /**
-   * Describe something
-   */
-  // let entityDependents = {};
-
-  /**
-   * Describe something
-   */
-  // let routeConfigurations = {};
-
-  console.log("ENTITY CONFIGS val");
-  console.log(entityConfigurations);
-
   const parseEntityOptions = (options) => {
     const { identifierField, isPrimaryEntity, isAdminCallback, passwordField } =
       options;
@@ -71,7 +58,7 @@ const moduleFn = function () {
   const validateMethodChainEntityForMethod = (methodName) => {
     if (!entityBeingConfigured || entityBeingConfigured === "") {
       throw new Error(
-        `Chaining module's configuration method ${methodName} require client to first call module method [configureEntity]`
+        `Chaining module's configuration method [${methodName}] require client to first call module method [configureEntity]`
       );
     }
   };
@@ -123,12 +110,6 @@ const moduleFn = function () {
       }
       return result;
     },
-    // getEntityDependents: function () {
-    //   return entityDependents;
-    // },
-    // getRouteConfigurations: function () {
-    //   return routeConfigurations;
-    // },
     useCustomDatabase: function () {
       if (
         entityConfigurations &&
@@ -250,54 +231,53 @@ const moduleFn = function () {
       };
       return this;
     },
-    // configureDependentsFor: function (entity, dependents = []) {
-    //   if (
-    //     !entityConfigurations ||
-    //     Object.keys(entityConfigurations).length === 0
-    //   ) {
-    //     throw new Error(
-    //       "Entities should be configured first before module method [configureDependentsFor] is called."
-    //     );
-    //   }
-    //   validateEntityForMethod(entity, "configureDependencyFor");
-    //   let deps = [];
-    //   dependents.forEach((d) => {
-    //     if (typeof d === "string") {
-    //       if (!Object.keys(entityConfigurations).includes(d)) {
-    //         throw new Error(
-    //           "Invalid or unknown entity(s) dependents provided in dependents array for module method [configureDependentsFor]."
-    //         );
-    //       }
-    //       deps.push({
-    //         entity: d,
-    //         forceDelete: false,
-    //       });
-    //     } else if (typeof d === "object") {
-    //       if (
-    //         !Object.keys(d).includes("entity") ||
-    //         !Object.keys(d).includes("forceDelete")
-    //       ) {
-    //         throw new Error(
-    //           "Invalid dependent object structure(s) found in dependents array for module method [configureDependentsFor]."
-    //         );
-    //       }
-    //       if (!Object.keys(entityConfigurations).includes(d.entity)) {
-    //         throw new Error(
-    //           "Invalid or unknown entity(s) dependents provided in dependents array for module method [configureDependentsFor]."
-    //         );
-    //       }
-    //       deps.push({
-    //         entity: d.entity,
-    //         forceDelete: d.forceDelete,
-    //       });
-    //     } else {
-    //       throw new Error(
-    //         "Invalid data type provided as dependents array for module method [configureDependentsFor]."
-    //       );
-    //     }
-    //   });
-    //   entityDependents[entity] = deps;
-    // },
+    addDependents: function (dependents = []) {
+      validateMethodChainEntityForMethod("addDependents");
+      let deps = [];
+      dependents.forEach((d) => {
+        if (typeof d === "string") {
+          if (!Object.keys(entityConfigurations).includes(d)) {
+            throw new Error(
+              "Invalid or unknown entity dependent(s) provided in dependents array for module method [addDependents]"
+            );
+          }
+          deps.push({
+            entity: d,
+            forceDelete: false,
+          });
+        } else if (typeof d === "object") {
+          if (
+            !Object.keys(d).includes("entity") ||
+            !Object.keys(d).includes("forceDelete")
+          ) {
+            throw new Error(
+              "Invalid dependent object structure(s) found in dependents array for module method [addDependents]"
+            );
+          }
+          if (!Object.keys(entityConfigurations).includes(d.entity)) {
+            throw new Error(
+              "Invalid or unknown entity(s) dependents provided in dependents array for module method [addDependents]"
+            );
+          }
+          deps.push({
+            entity: d.entity,
+            forceDelete: d.forceDelete,
+          });
+        } else {
+          throw new Error(
+            "Invalid data type provided as dependents array for module method [addDependents]"
+          );
+        }
+      });
+      entityConfigurations = {
+        ...entityConfigurations,
+        [entityBeingConfigured]: {
+          ...entityConfigurations[entityBeingConfigured],
+          dependents: [...deps],
+        },
+      };
+      return this;
+    },
     configureRoutesFor: function (entity, config = {}) {
       if (
         !entityConfigurations ||

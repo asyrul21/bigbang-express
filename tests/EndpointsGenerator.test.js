@@ -436,7 +436,6 @@ describe("Endpoints Generator: Configuring Entity DB Modules with method chainin
   it("Should throw error if addDbModule is called without first calling configureEntity", () => {
     const entityModuleStub = sinon.stub();
     let error = null;
-    let result = null;
     try {
       EndpointsGenerator.addDBModule(entityModuleStub);
     } catch (e) {
@@ -447,141 +446,152 @@ describe("Endpoints Generator: Configuring Entity DB Modules with method chainin
   });
 });
 
-// describe("Endpoints Generator: Configuring Entity Dependents", () => {
-//   beforeEach(() => {
-//     EndpointsGenerator._resetModule();
-//   });
+describe("Endpoints Generator: Configuring Entity Dependents", () => {
+  beforeEach(() => {
+    EndpointsGenerator._resetModule();
+  });
 
-//   it("should throw error when entities were not configured", () => {
-//     let error = null;
-//     try {
-//       EndpointsGenerator.configureDependentsFor("johny");
-//     } catch (e) {
-//       console.log(e);
-//       error = e;
-//     }
-//     assert.notEqual(error, null);
-//   });
+  it("should throw error when addDependents is called without first calling configureEntity", () => {
+    let error = null;
+    try {
+      EndpointsGenerator.addDependents("categories");
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.notEqual(error, null);
+  });
 
-//   it("should throw error when passing invalid entity", () => {
-//     let error = null;
-//     try {
-//       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users);
-//       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
-//       EndpointsGenerator.configureDependentsFor("johny");
-//     } catch (e) {
-//       console.log(e);
-//       error = e;
-//     }
-//     assert.notEqual(error, null);
-//   });
+  it("should throw error when passing invalid string entity in dependents array", () => {
+    let error = null;
+    try {
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users).addDependents([
+        "johny",
+      ]);
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.notEqual(error, null);
+  });
 
-//   it("should throw error when passing invalid string entity in dependents array", () => {
-//     let error = null;
-//     try {
-//       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users);
-//       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
+  it("should throw error when passing object with invalid entity in dependents array", () => {
+    let error = null;
+    try {
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users).addDependents([
+        {
+          entity: "johny",
+          forceDelete: false,
+        },
+      ]);
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.notEqual(error, null);
+  });
 
-//       EndpointsGenerator.configureDependentsFor("users", ["johny"]);
-//     } catch (e) {
-//       console.log(e);
-//       error = e;
-//     }
-//     assert.notEqual(error, null);
-//   });
+  it("should throw error when passing object with invalid structure in dependents array", () => {
+    let error = null;
+    try {
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users).addDependents([
+        {
+          name: "johny",
+          age: 21,
+        },
+      ]);
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.notEqual(error, null);
+  });
 
-//   it("should throw error when passing object with invalid entity in dependents array", () => {
-//     let error = null;
-//     try {
-//       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users);
-//       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
+  it("should add string dependents successfully for entity", () => {
+    let error = null;
+    let result = null;
+    const expectedConfigs = {
+      comments: {
+        name: "comments",
+        identifierField: "id",
+        isPrimaryEntity: false,
+        isAdminCallback: null,
+      },
+      users: {
+        name: "users",
+        identifierField: "key",
+        isPrimaryEntity: true,
+        isAdminCallback: null,
+        dependents: [
+          {
+            entity: "comments",
+            forceDelete: false,
+          },
+        ],
+      },
+    };
+    try {
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
+        isPrimaryEntity: true,
+        identifierField: "key",
+      }).addDependents(["comments"]);
 
-//       EndpointsGenerator.configureDependentsFor("users", [
-//         {
-//           entity: "johny",
-//           forceDelete: false,
-//         },
-//       ]);
-//     } catch (e) {
-//       console.log(e);
-//       error = e;
-//     }
-//     assert.notEqual(error, null);
-//   });
+      result = EndpointsGenerator.getEntityConfigurations();
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.equal(error, null);
+    assert.deepStrictEqual(result, expectedConfigs);
+  });
 
-//   it("should throw error when passing object with invalid structure in dependents array", () => {
-//     let error = null;
-//     try {
-//       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users);
-//       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
-
-//       EndpointsGenerator.configureDependentsFor("users", [
-//         {
-//           name: "johny",
-//           age: 21,
-//         },
-//       ]);
-//     } catch (e) {
-//       console.log(e);
-//       error = e;
-//     }
-//     assert.notEqual(error, null);
-//   });
-
-//   it("should add string dependents successfully for entity", () => {
-//     let error = null;
-//     let result = null;
-//     const expectedDependents = {
-//       users: [
-//         {
-//           entity: "comments",
-//           forceDelete: false,
-//         },
-//       ],
-//     };
-//     try {
-//       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users);
-//       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
-
-//       EndpointsGenerator.configureDependentsFor("users", ["comments"]);
-//       result = EndpointsGenerator.getEntityDependents();
-//     } catch (e) {
-//       console.log(e);
-//       error = e;
-//     }
-//     assert.equal(error, null);
-//     assert.deepStrictEqual(result, expectedDependents);
-//   });
-
-//   it("should add object dependents successfully for entity", () => {
-//     let error = null;
-//     let result = null;
-//     const expectedDependents = {
-//       users: [
-//         {
-//           entity: "comments",
-//           forceDelete: true,
-//         },
-//       ],
-//     };
-//     try {
-//       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users);
-//       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
-//       EndpointsGenerator.configureDependentsFor("users", [
-//         {
-//           entity: "comments",
-//           forceDelete: true,
-//         },
-//       ]);
-//       result = EndpointsGenerator.getEntityDependents();
-//     } catch (e) {
-//       console.log(e);
-//       error = e;
-//     }
-//     assert.equal(error, null);
-//     assert.deepStrictEqual(result, expectedDependents);
-//   });
-// });
+  it("should add object dependents successfully for entity", () => {
+    let error = null;
+    let result = null;
+    const expectedConfigs = {
+      comments: {
+        name: "comments",
+        identifierField: "id",
+        isPrimaryEntity: false,
+        isAdminCallback: null,
+      },
+      users: {
+        name: "users",
+        identifierField: "key",
+        isPrimaryEntity: true,
+        isAdminCallback: null,
+        dependents: [
+          {
+            entity: "comments",
+            forceDelete: true,
+          },
+        ],
+      },
+    };
+    try {
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
+        isPrimaryEntity: true,
+        identifierField: "key",
+      }).addDependents([
+        {
+          entity: "comments",
+          forceDelete: true,
+        },
+      ]);
+      result = EndpointsGenerator.getEntityConfigurations();
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.equal(error, null);
+    assert.deepStrictEqual(result, expectedConfigs);
+  });
+});
 
 // describe("Endpoints Generator: Configuring Entity Routes", () => {
 //   beforeEach(() => {
