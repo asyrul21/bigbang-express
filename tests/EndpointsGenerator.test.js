@@ -611,26 +611,111 @@ describe("Endpoints Generator: Configuring Entity Routes", () => {
     assert.notEqual(error, null);
   });
 
+  it("should throw error when config object has invalid key", () => {
+    const sampleConfiguration = {
+      person: {
+        path: "/",
+        middlewares: [],
+        auth: authOptions.false,
+      },
+    };
+    let error = null;
+    try {
+      EndpointsGenerator.configureEntity("categories").configureRoutes(
+        sampleConfiguration
+      );
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.notEqual(error, null);
+  });
+
+  it("should throw error when config object has invalid route path value", () => {
+    const sampleConfiguration = {
+      [ACTIONS.findMany]: {
+        path: 1234,
+        middlewares: [],
+        auth: authOptions.false,
+      },
+    };
+    let error = null;
+    try {
+      EndpointsGenerator.configureEntity("categories").configureRoutes(
+        sampleConfiguration
+      );
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.notEqual(error, null);
+  });
+
+  it("should throw error when config object has invalid route middlewares value", () => {
+    const sampleConfiguration = {
+      [ACTIONS.findMany]: {
+        path: "/",
+        middlewares: "John",
+        auth: authOptions.false,
+      },
+    };
+    let error = null;
+    try {
+      EndpointsGenerator.configureEntity("categories").configureRoutes(
+        sampleConfiguration
+      );
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.notEqual(error, null);
+  });
+
+  it("should throw error when config object has invalid route auth value", () => {
+    const sampleConfiguration = {
+      [ACTIONS.findMany]: {
+        path: "/",
+        middlewares: [],
+        auth: true,
+      },
+    };
+    let error = null;
+    try {
+      EndpointsGenerator.configureEntity("categories").configureRoutes(
+        sampleConfiguration
+      );
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.notEqual(error, null);
+  });
+
   // configureRoutesFor is optional. If not called it will auto generate for you
   it("should add entity configuration successfully when supplied with a full config", () => {
     const sampleConfiguration = {
       [ACTIONS.findMany]: {
+        path: "/",
         middlewares: [],
         auth: authOptions.false,
       },
       [ACTIONS.findById]: {
+        path: "/:id",
         middlewares: [],
         auth: authOptions.false,
       },
       [ACTIONS.createOne]: {
+        path: "/",
         middlewares: [],
         auth: authOptions.adminOnly,
       },
       [ACTIONS.updateOne]: {
+        path: "/:id",
         middlewares: [],
         auth: authOptions.adminOnly,
       },
       [ACTIONS.deleteOne]: {
+        path: "/:id",
         middlewares: [],
         auth: authOptions.adminOnly,
       },
@@ -643,6 +728,69 @@ describe("Endpoints Generator: Configuring Entity Routes", () => {
         isAdminCallback: null,
         routes: {
           ...sampleConfiguration,
+        },
+      },
+    };
+    let error = null;
+    let result = null;
+    try {
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
+        isPrimaryEntity: true,
+      }).configureRoutes(sampleConfiguration);
+      result = EndpointsGenerator.getEntityConfigurations();
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.equal(error, null);
+    assert.deepStrictEqual(expected, result);
+  });
+
+  it("should pad route configuration successfully when supplied with configs with partial definition", () => {
+    const sampleConfiguration = {
+      [ACTIONS.findMany]: {
+        path: "/",
+        auth: authOptions.false,
+      },
+      [ACTIONS.findById]: {
+        path: "/:id",
+        middlewares: [],
+      },
+      [ACTIONS.createOne]: {
+        middlewares: [],
+        auth: authOptions.adminOnly,
+      },
+      [ACTIONS.updateOne]: {},
+      [ACTIONS.deleteOne]: false,
+    };
+    const expected = {
+      users: {
+        name: "users",
+        identifierField: "id",
+        isPrimaryEntity: true,
+        isAdminCallback: null,
+        routes: {
+          [ACTIONS.findMany]: {
+            path: "/",
+            middlewares: [],
+            auth: authOptions.false,
+          },
+          [ACTIONS.findById]: {
+            path: "/:id",
+            middlewares: [],
+            auth: authOptions.false,
+          },
+          [ACTIONS.createOne]: {
+            path: "/",
+            middlewares: [],
+            auth: authOptions.adminOnly,
+          },
+          [ACTIONS.updateOne]: {
+            path: "/:id",
+            middlewares: [],
+            auth: authOptions.adminOnly,
+          },
+          [ACTIONS.deleteOne]: false,
         },
       },
     };

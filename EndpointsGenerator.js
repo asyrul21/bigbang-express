@@ -2,7 +2,14 @@ const express = require("express");
 const morgan = require("morgan");
 const ActionFunctionFactory = require("./ActionFunctionFactory");
 const ACTIONS = require("./constants/ACTIONS");
-const { objectHasMethod, booleanHasValue, stringHasValue } = require("./utils");
+const DEFAULT_ROUTES_CONFIG = require("./constants/DEFAULT_ROUTES_CONFIG");
+const ROUTE_CONFIG_ENUMS = require("./constants/ROUTE_CONFIG_ENUMS");
+const {
+  objectHasMethod,
+  booleanHasValue,
+  stringHasValue,
+  objectHasValue,
+} = require("./utils");
 
 const moduleFn = function () {
   /**
@@ -26,8 +33,7 @@ const moduleFn = function () {
   let entityBeingConfigured = null;
 
   const parseEntityOptions = (options) => {
-    const { identifierField, isPrimaryEntity, isAdminCallback, passwordField } =
-      options;
+    const { identifierField, isPrimaryEntity, isAdminCallback } = options;
     const idField = stringHasValue(identifierField) ? identifierField : "id";
     const isPrimary = booleanHasValue(isPrimaryEntity)
       ? isPrimaryEntity
@@ -63,16 +69,78 @@ const moduleFn = function () {
     }
   };
 
-  const validateEntityForMethod = (entity, methodName) => {
-    if (
-      !entity ||
-      typeof entity !== "string" ||
-      !Object.keys(entityConfigurations).includes(entity)
-    ) {
+  const padRoutesConfigurationsWithDefaults = (config) => {
+    let result = { ...config };
+    Object.keys(config).forEach((action) => {
+      const routeActionConfig = config[action];
+      // if action config is false, client is omitting the route path.
+      // hence dont need configs for that
+      if (routeActionConfig !== false) {
+        const { path, middlewares, auth } = routeActionConfig;
+        const defaultActionConfig = DEFAULT_ROUTES_CONFIG[action];
+        // if undefined, client provided invalid action key
+        if (objectHasValue(defaultActionConfig)) {
+          const routePath = path ? path : defaultActionConfig.path;
+          const routeMiddlewares = middlewares
+            ? middlewares
+            : defaultActionConfig.middlewares;
+          const routeAuth = auth ? auth : defaultActionConfig.auth;
+
+          result = {
+            ...result,
+            [action]: {
+              path: routePath,
+              middlewares: routeMiddlewares,
+              auth: routeAuth,
+            },
+          };
+        }
+      }
+    });
+    return result;
+  };
+
+  const validateRoutesConfigurationStructure = (config) => {
+    // validate invalid keys
+    let invalid = [];
+    Object.keys(config).forEach((a) => {
+      if (!ACTIONS[a] && config[a] !== false) {
+        invalid.push(a);
+      }
+    });
+    if (invalid.length > 0) {
       throw new Error(
-        `Invalid parameter [entity] provided for function [${methodName}].`
+        `Provided route configuration key(s) [${invalid.toString()}] are invalid.`
       );
     }
+    // validate each route's keys and structure
+    invalid = [];
+    Object.keys(config).forEach((a) => {
+      if (config[a] !== false) {
+        const { middlewares, auth, path } = config[a];
+        // check path
+        if (!path || path === "" || typeof path !== "string") {
+          throw new Error(
+            `Route configuration for entity [${entityBeingConfigured}] and action [${a}] has missing or invalid value for key [path]`
+          );
+        }
+        // check middlewares
+        if (!middlewares || typeof middlewares !== "object") {
+          throw new Error(
+            `Route configuration for entity [${entityBeingConfigured}] and action [${a}] has missing or invalid value for key [middlewares]`
+          );
+        }
+        // check auth
+        if (
+          auth !== false &&
+          !Object.keys(ROUTE_CONFIG_ENUMS.authOptions).includes(config[a].auth)
+        ) {
+          throw new Error(
+            `Route configuration for entity [${entityBeingConfigured}] and action [${a}] has massing or invalid value for key [auth]`
+          );
+        }
+      }
+    });
   };
 
   return {
@@ -278,6 +346,14 @@ const moduleFn = function () {
       };
       return this;
     },
+    /**
+     *
+     * @param {Object} routesConfig - specific route configurations based on ACTIONS. Mark false to omit route, or omit the action key to use default implementation
+     * @returns void
+     *
+     * This method is optional. If client does not provide, routes with be configures using default settings.
+     */
+
     configureRoutes: function (routesConfig = {}) {
       validateMethodChainEntityForMethod("configureRoutes");
       if (!routesConfig || Object.keys(routesConfig).length === 0) {
@@ -285,7 +361,8 @@ const moduleFn = function () {
           "Argument parameter [routesConfig] is required for module method [configureRoutes]."
         );
       }
-      // TODO verify structure of config
+      routesConfig = padRoutesConfigurationsWithDefaults(routesConfig);
+      validateRoutesConfigurationStructure(routesConfig);
 
       entityConfigurations = {
         ...entityConfigurations,
@@ -295,6 +372,9 @@ const moduleFn = function () {
         },
       };
       return this;
+    },
+    extendRoutesWith: function (path, middlewares = [], controllerCallback) {
+      validateMethodChainEntityForMethod("extendRoutesWith");
     },
     // prepareAppConstruction: function (
     //   app,
