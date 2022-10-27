@@ -356,19 +356,18 @@ const moduleFn = function () {
 
     configureRoutes: function (routesConfig = {}) {
       validateMethodChainEntityForMethod("configureRoutes");
+      let routesConfigResult;
       if (!routesConfig || Object.keys(routesConfig).length === 0) {
-        throw new Error(
-          "Argument parameter [routesConfig] is required for module method [configureRoutes]."
-        );
+        routesConfigResult = { ...DEFAULT_ROUTES_CONFIG };
+      } else {
+        routesConfigResult = padRoutesConfigurationsWithDefaults(routesConfig);
+        validateRoutesConfigurationStructure(routesConfigResult);
       }
-      routesConfig = padRoutesConfigurationsWithDefaults(routesConfig);
-      validateRoutesConfigurationStructure(routesConfig);
-
       entityConfigurations = {
         ...entityConfigurations,
         [entityBeingConfigured]: {
           ...entityConfigurations[entityBeingConfigured],
-          routes: { ...routesConfig },
+          routes: { ...routesConfigResult },
         },
       };
       return this;

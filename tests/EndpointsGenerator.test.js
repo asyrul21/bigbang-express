@@ -5,6 +5,7 @@ const express = require("express");
 const EndpointsGenerator = require("../EndpointsGenerator");
 const ActionFunctionFactory = require("../ActionFunctionFactory");
 const { authOptions } = require("../constants/ROUTE_CONFIG_ENUMS");
+const DEFAULT_ROUTES_CONFIG = require("../constants/DEFAULT_ROUTES_CONFIG");
 
 // dependency handling: either delete dependents or update them to null
 const SAMPLE_ENTITIES = {
@@ -692,6 +693,33 @@ describe("Endpoints Generator: Configuring Entity Routes", () => {
   });
 
   // configureRoutesFor is optional. If not called it will auto generate for you
+  it("should add entity DEFAULT configuration successfully when not providing config object", () => {
+    let error = null;
+    let result = null;
+    const expected = {
+      users: {
+        name: "users",
+        identifierField: "id",
+        isPrimaryEntity: true,
+        isAdminCallback: null,
+        routes: {
+          ...DEFAULT_ROUTES_CONFIG,
+        },
+      },
+    };
+    try {
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
+        isPrimaryEntity: true,
+      }).configureRoutes();
+      result = EndpointsGenerator.getEntityConfigurations();
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.equal(error, null);
+    assert.deepStrictEqual(expected, result);
+  });
+
   it("should add entity configuration successfully when supplied with a full config", () => {
     const sampleConfiguration = {
       [ACTIONS.findMany]: {
