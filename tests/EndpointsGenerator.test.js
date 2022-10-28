@@ -838,6 +838,184 @@ describe("Endpoints Generator: Configuring Entity Routes", () => {
   });
 });
 
+describe("Endpoints Generator: Extending Entity Routes", () => {
+  beforeEach(() => {
+    EndpointsGenerator._resetModule();
+  });
+
+  it("should throw error when extendRoutesWith is called without first calling configureEntity", () => {
+    let error = null;
+    try {
+      EndpointsGenerator.extendRoutesWith("get", "/", [], (req, res) => {
+        return true;
+      });
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.notEqual(error, null);
+  });
+
+  it("should throw error when extendRoutesWith is called with invalid method value", () => {
+    let error = null;
+    try {
+      EndpointsGenerator.configureEntity("users").extendRoutesWith(
+        "Johny",
+        "/",
+        [],
+        (req, res) => {
+          return true;
+        }
+      );
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.notEqual(error, null);
+  });
+
+  it("should throw error when extendRoutesWith is called with invalid path value", () => {
+    let error = null;
+    try {
+      EndpointsGenerator.configureEntity("users").extendRoutesWith(
+        "get",
+        1234,
+        [],
+        (req, res) => {
+          return true;
+        }
+      );
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.notEqual(error, null);
+  });
+
+  it("should throw error when extendRoutesWith is called with invalid middlewares value", () => {
+    let error = null;
+    try {
+      EndpointsGenerator.configureEntity("users").extendRoutesWith(
+        "get",
+        "/",
+        [true, false],
+        (req, res) => {
+          return true;
+        }
+      );
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.notEqual(error, null);
+  });
+
+  it("should throw error when extendRoutesWith is called with invalid controllerCallback value", () => {
+    let error = null;
+    try {
+      EndpointsGenerator.configureEntity("users").extendRoutesWith(
+        "get",
+        "/",
+        [],
+        "Johny"
+      );
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.notEqual(error, null);
+  });
+
+  it("should extend single route configuration successfully", () => {
+    let error = null;
+    let result = null;
+    const controllerCbStub = sinon.stub();
+
+    const expected = {
+      users: {
+        name: "users",
+        identifierField: "id",
+        isPrimaryEntity: true,
+        isAdminCallback: null,
+        extendedRoutes: [
+          {
+            method: "put",
+            path: "/:id/test",
+            middlewares: [],
+            controllerCallback: controllerCbStub,
+          },
+        ],
+      },
+    };
+
+    try {
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
+        isPrimaryEntity: true,
+      }).extendRoutesWith("put", "/:id/test", [], controllerCbStub);
+
+      result = EndpointsGenerator.getEntityConfigurations();
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.equal(error, null);
+    assert.deepStrictEqual(expected, result);
+  });
+
+  it("should extend multiple route configuration successfully with middlewares", () => {
+    let error = null;
+    let result = null;
+    const controllerCbStub1 = sinon.stub();
+    const controllerCbStub2 = sinon.stub();
+
+    const middlewareStub1 = sinon.stub();
+    const middlewareStub2 = sinon.stub();
+
+    const expected = {
+      users: {
+        name: "users",
+        identifierField: "id",
+        isPrimaryEntity: true,
+        isAdminCallback: null,
+        extendedRoutes: [
+          {
+            method: "put",
+            path: "/:id/test",
+            middlewares: [],
+            controllerCallback: controllerCbStub1,
+          },
+          {
+            method: "post",
+            path: "/:id",
+            middlewares: [middlewareStub1, middlewareStub2],
+            controllerCallback: controllerCbStub2,
+          },
+        ],
+      },
+    };
+
+    try {
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
+        isPrimaryEntity: true,
+      })
+        .extendRoutesWith("put", "/:id/test", [], controllerCbStub1)
+        .extendRoutesWith(
+          "post",
+          "/:id",
+          [middlewareStub1, middlewareStub2],
+          controllerCbStub2
+        );
+
+      result = EndpointsGenerator.getEntityConfigurations();
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.equal(error, null);
+    assert.deepStrictEqual(expected, result);
+  });
+});
+
 // describe("Endpoints Generator: App Preparation", () => {
 //   it("should throw error when invalid app parameter is passed", () => {
 //     let error = null;

@@ -11,6 +11,8 @@ const {
   objectHasValue,
 } = require("./utils");
 
+const ROUTE_METHODS = ["get", "post", "put", "delete"];
+
 const moduleFn = function () {
   /**
    * Describe something here
@@ -59,6 +61,16 @@ const moduleFn = function () {
       return false;
     }
     return true;
+  };
+
+  const arrayHasAllFunctions = (arr) => {
+    let pass = true;
+    arr.forEach((f) => {
+      if (typeof f !== "function") {
+        pass = false;
+      }
+    });
+    return pass;
   };
 
   const validateMethodChainEntityForMethod = (methodName) => {
@@ -372,8 +384,63 @@ const moduleFn = function () {
       };
       return this;
     },
-    extendRoutesWith: function (path, middlewares = [], controllerCallback) {
+    /**
+     *
+     * @param {string} method - "get" || "post" || "put" || "delete"
+     * @param {string} path - route path. eg. /export/json
+     * @param {Object} middlewares - array of middleware functions
+     * @param {Function} controllerCallback - controller function
+     */
+    extendRoutesWith: function (
+      method,
+      path,
+      middlewares = [],
+      controllerCallback
+    ) {
       validateMethodChainEntityForMethod("extendRoutesWith");
+      if (!method || !ROUTE_METHODS.includes(method)) {
+        throw new Error(
+          `Invalid value provided for argument [method] of module method [extendRoutesWith]`
+        );
+      }
+      if (!path || typeof path !== "string") {
+        throw new Error(
+          `Invalid value provided for argument [path] of module method [extendRoutesWith]`
+        );
+      }
+      if (!middlewares || !arrayHasAllFunctions(middlewares)) {
+        throw new Error(
+          `Invalid array item value(s) provided for argument [middlewares] of module method [extendRoutesWith]`
+        );
+      }
+      if (!controllerCallback || typeof controllerCallback !== "function") {
+        throw new Error(
+          `Invalid value provided for argument [controllerCallback] of module method [extendRoutesWith]`
+        );
+      }
+      const newRouteExtension = {
+        method,
+        path,
+        middlewares,
+        controllerCallback,
+      };
+
+      entityConfigurations = {
+        ...entityConfigurations,
+        [entityBeingConfigured]: {
+          ...entityConfigurations[entityBeingConfigured],
+          extendedRoutes:
+            entityConfigurations[entityBeingConfigured].extendedRoutes &&
+            entityConfigurations[entityBeingConfigured].extendedRoutes.length >
+              0
+              ? [
+                  ...entityConfigurations[entityBeingConfigured].extendedRoutes,
+                  newRouteExtension,
+                ]
+              : [newRouteExtension],
+        },
+      };
+      return this;
     },
     // prepareAppConstruction: function (
     //   app,
