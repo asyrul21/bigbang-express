@@ -5,6 +5,10 @@ const ACTIONS = require("./constants/ACTIONS");
 const DEFAULT_ROUTES_CONFIG = require("./constants/DEFAULT_ROUTES_CONFIG");
 const ROUTE_CONFIG_ENUMS = require("./constants/ROUTE_CONFIG_ENUMS");
 const {
+  defaultErrorHandler,
+  defaultNotFoundMiddleware,
+} = require("./middlewares/errorHandlers");
+const {
   objectHasMethod,
   booleanHasValue,
   stringHasValue,
@@ -71,6 +75,49 @@ const moduleFn = function () {
       }
     });
     return pass;
+  };
+
+  const validatePrimaryEntity = () => {
+    const primaryEntityNames = Object.keys(entityConfigurations)
+      .map((e) => {
+        return {
+          name: entityConfigurations[e].name,
+          isPrimaryEntity: entityConfigurations[e].isPrimaryEntity,
+        };
+      })
+      .filter((e) => e.isPrimaryEntity);
+    if (primaryEntityNames.length === 0) {
+      throw new Error(
+        "No primary entity were found. Client must provide one and only one primary entity"
+      );
+    } else if (primaryEntityNames.length > 1) {
+      throw new Error(
+        "More than one primary entities were found. Client must provide one and only one primary entity"
+      );
+    }
+  };
+
+  const validateAllEntityDBModules = () => {
+    let invalid = [];
+    Object.keys(entityConfigurations).forEach((e) => {
+      config = entityConfigurations[e];
+      entityDbModule = config.DBModule;
+      if (!entityDbModule || typeof entityDbModule !== "function") {
+        invalid.push(e);
+      }
+    });
+    if (invalid.length > 0) {
+      throw new Error(
+        `Using Custom Database requires client to provide DBModule callback for all entities. Missing DBModule callbacks found for entities [${invalid.toString()}]`
+      );
+    }
+  };
+
+  const getPrimaryEntity = () => {
+    const primaryEntities = Object.keys(entityConfigurations)
+      .map((e) => entityConfigurations[e])
+      .filter((e) => e.isPrimaryEntity);
+    return primaryEntities[0];
   };
 
   const validateMethodChainEntityForMethod = (methodName) => {
@@ -160,7 +207,6 @@ const moduleFn = function () {
       useCustomDB = false;
       adaptedClientDBInterface = {};
       entityConfigurations = {};
-      // routeConfigurations = {};
       entityBeingConfigured = null;
     },
     _resetEntityConfigurations: function () {
@@ -442,31 +488,6 @@ const moduleFn = function () {
       };
       return this;
     },
-    // prepareAppConstruction: function (
-    //   app,
-    //   options = {
-    //     env: "dev",
-    //     useCustomDatabase: false,
-    //   }
-    // ) {
-    //   if (!objectHasMethod(app, "use") || !objectHasMethod(app, "listen")) {
-    //     throw new Error(
-    //       "Invalid parameter provided to module method [prepareApp]. Paramenter must be an instance of Express application."
-    //     );
-    //   }
-    //   const { env, useCustomDatabase } = options;
-
-    //   app.use(express.json());
-    //   if (env === env ? env : "dev") {
-    //     app.use(morgan("dev"));
-    //   }
-    //   if (useCustomDatabase) {
-    //     useCustomDB = true;
-    //   }
-    //
-    //
-    // },
-    // TODO: ERROR HANDLING MIDDLEWARES!!!
     generateEndpointsFor: function (app, entity, overrides = {}) {
       // add routes, if not in routeConfigs, use default configs
 
@@ -482,6 +503,79 @@ const moduleFn = function () {
     },
     helloWorld: function () {
       console.log("Hello world!");
+    },
+
+    create: async function (
+      app,
+      middlewareOverrides = {
+        errorHandler: null,
+        notFoundHandler: null,
+        env: "dev",
+        initializeAppCallback: async function (env) {},
+      }
+    ) {
+      entityBeingConfigured = null;
+      if (
+        !entityConfigurations ||
+        Object.keys(entityConfigurations).length === 0
+      ) {
+        throw new Error(
+          "Clients must first configure app entities using module method [configureEntity] before calling module method [create]"
+        );
+      }
+      /**
+       * Validations
+       */
+      if (!objectHasMethod(app, "use") || !objectHasMethod(app, "listen")) {
+        throw new Error(
+          "Invalid parameter provided to module method [create]. Parameter must be an instance of Express module"
+        );
+      }
+      validatePrimaryEntity();
+      if (useCustomDB) {
+        validateAllEntityDBModules();
+      }
+      /**
+       * Param processing
+       */
+      const { errorHandler, notFoundHandler, env, initializeAppCallback } =
+        middlewareOverrides;
+      const environment = env && typeof env === "string" ? env : "dev";
+      const initializeApplication =
+        initializeAppCallback && typeof initializeAppCallback === "function"
+          ? initializeAppCallback
+          : async function (environment) {};
+      /**
+       * Middleware setup
+       */
+      const errorHandlerMiddleware =
+        errorHandler && typeof errorHandler === "function"
+          ? errorHandler
+          : defaultErrorHandler;
+      const notFoundMiddleware =
+        notFoundHandler && typeof notFoundHandler === "function"
+          ? notFoundHandler
+          : defaultNotFoundMiddleware;
+
+      /**
+       * App creation
+       */
+      app.use(express.json());
+      if (environment === "dev") {
+        app.use(morgan("dev"));
+      }
+      await initializeApplication(environment);
+
+      /**
+       * Routes generation
+       */
+      // bla bla
+
+      /**
+       * Error middlewares
+       */
+      app.use(notFoundMiddleware);
+      app.use(errorHandlerMiddleware);
     },
   };
 };

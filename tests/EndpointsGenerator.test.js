@@ -48,15 +48,6 @@ const expressRouterStub = {
   }),
 };
 
-const mockExpressAppObject = {
-  listen: function () {
-    console.log("mock app listen function");
-  },
-  use: function (sampleParam) {
-    const sample = "Just for fun";
-  },
-};
-
 const routerFake = sinon.fake.returns(expressRouterStub); // this mocks and spies on express.Router()
 sinon.stub(express, "Router").callsFake(routerFake); // replaces express's Router with our stub
 
@@ -229,19 +220,6 @@ describe("Endpoints Generator: Entity Configuration", () => {
     assert.notEqual(error, null);
   });
 
-  // it("should throw error when using custom database but did not provide DBModule callback", () => {
-  //   let error = null;
-  //   try {
-  //     EndpointsGenerator.useCustomDatabase();
-  //     EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
-  //     EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.categories);
-  //   } catch (e) {
-  //     console.log(e);
-  //     error = e;
-  //   }
-  //   assert.notEqual(error, null);
-  // });
-
   it("should throw error when configuring single entity twice callback", () => {
     let error = null;
     try {
@@ -327,42 +305,6 @@ describe("Endpoints Generator: Entity Configuration", () => {
     assert.equal(error, null);
     assert.deepStrictEqual(result, expectedEntityConfiguration);
   });
-
-  // it("should configure multiple entities when using custom database successfully", () => {
-  //   const cateogoriesModuleStub = sinon.stub();
-  //   const commentModulesStub = sinon.stub();
-  //   const expectedEntityConfiguration = {
-  //     categories: {
-  //       name: "categories",
-  //       DBModule: cateogoriesModuleStub,
-  //     },
-  //     comments: {
-  //       name: "comments",
-  //       DBModule: commentModulesStub,
-  //     },
-  //   };
-  //   let error = null;
-  //   let result = null;
-  //   try {
-  //     EndpointsGenerator.useCustomDatabase();
-  //     EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
-
-  //     EndpointsGenerator.configureEntity(
-  //       SAMPLE_ENTITIES.categories,
-  //       cateogoriesModuleStub
-  //     );
-  //     EndpointsGenerator.configureEntity(
-  //       SAMPLE_ENTITIES.comments,
-  //       commentModulesStub
-  //     );
-
-  //     result = EndpointsGenerator.getEntityConfigurations();
-  //   } catch (e) {
-  //     error = e;
-  //   }
-  //   assert.equal(error, null);
-  //   assert.deepStrictEqual(result, expectedEntityConfiguration);
-  // });
 });
 
 describe("Endpoints Generator: Configuring Entity DB Modules with method chaining", () => {
@@ -1016,146 +958,277 @@ describe("Endpoints Generator: Extending Entity Routes", () => {
   });
 });
 
-// describe("Endpoints Generator: App Preparation", () => {
-//   it("should throw error when invalid app parameter is passed", () => {
-//     let error = null;
-//     try {
-//       EndpointsGenerator.prepareAppConstruction({ name: "john" });
-//     } catch (e) {
-//       error = e;
-//     }
-//     assert.throws(() => {
-//       EndpointsGenerator.prepareAppConstruction({ name: "john" });
-//     });
-//     assert.notEqual(error, null);
-//   });
+// configure Errorhandler and notFound Middlewares - put as options
 
-//   it("should call app's [use] method 2 times", () => {
-//     const appUseSpy = sinon.spy(mockExpressAppObject, "use");
-//     let error = null;
-//     try {
-//       EndpointsGenerator.prepareAppConstruction(mockExpressAppObject);
-//     } catch (e) {
-//       error = e;
-//     }
-//     const calledTimes = appUseSpy.callCount;
-//     assert.equal(calledTimes, 2);
-//     assert.equal(error, null);
-//   });
-// });
+// generate endpoints using default route configs
+// generate endpoints using custom route configs
+//  - custom path
+//  - custom auth
+//  - custom middlewares
+//  - omit route action by marking false
+// generate endpoints using custom route configs and 1 extended routes
+// generate endpoints using custom route configs and 2 extended routes
 
-// describe("Endpoints Generator: Routes Generation", () => {
-//   let app;
-//   let expressRouterSpy;
-//   let routeSpy;
-//   let appUseSpy;
-//   let appUseStub;
+describe("Endpoints Generator: Create App", () => {
+  /**
+   * create is async, but if run at top level may not need a preceeding 'await'
+   */
 
-//   beforeEach(() => {
-//     app = express();
-//     appUseStub = sinon.stub(app, "use");
-//     // expressRouterSpy = sinon.spy(express, "Router");
-//     // routeSpy = sinon.spy(express.Router(), "route");
-//     // console.log(express.Router());
-//     // appUseSpy = sinon.spy(app, "use");
-//   });
+  let appUseSpy;
+  let appUseStub;
+  let expressAppStub = null;
 
-//   // afterEach(() => {
-//   //   app = null;
-//   //   expressRouterSpy = null;
-//   //   routeSpy = null;
-//   //   appUseSpy = null;
-//   // });
+  beforeEach(() => {
+    EndpointsGenerator._resetModule();
+    appUseStub = sinon.stub();
+    expressAppStub = {
+      listen: sinon.stub(),
+      use: appUseStub,
+    };
 
-//   it("should call router.route with params [/], and appropriate function", () => {
-//     /* expect app to run:
-//      *
-//      * const router = express.router()
-//      *
-//      * const composedFunction = async function(req,res,next) => {
-//      * try {
-//      *      const categories = await DB.findAllFor(DB.getEntityConfigurations().categories);
-//      *      res.status(200).json(categories);
-//      * } catch (error) {
-//      *      res.status(400);
-//      *      next(new Error(error.message || error));
-//      *     }
-//      * }
-//      *
-//      * router.route(/).get(composedFunction)
-//      *
-//      *
-//      *  app.use(/api/categories, )
-//      */
-//     let error = null;
-//     try {
-//       EndpointsGenerator.generateEndpointsFor(app, "categories", {});
-//     } catch (e) {
-//       console.log(e);
-//       error = e;
-//     }
-//     assert.equal(error, null);
-//     // check if router was called only twice
-//     assert.equal(routerFake.callCount, 1);
-//     // check if route was called with correct paths
-//     assert.equal(expressRouterStub.route.calledWith("/"), true);
-//     // check if route was called with correct paths and method
-//     sinon.assert.calledWith(rootRoutesStub.get, sinon.match.func);
-//     sinon.assert.calledWith(rootRoutesStub.get, actionFunctionStub);
-//     // check if app.use was called exactly once
-//     assert.equal(appUseStub.callCount, 1);
-//   });
+    // appUseStub = sinon.stub(app, "use");
+    // expressRouterSpy = sinon.spy(express, "Router");
+    // routeSpy = sinon.spy(express.Router(), "route");
+    // console.log(express.Router());
+    // appUseSpy = sinon.spy(app, "use");
+  });
 
-//   // it("should call router.route with params [/], with specified middlewares", () => {
-//   //   /* expect app to run:
-//   //    *
-//   //    * const router = express.router()
-//   //    *
-//   //    * const composedFunction = async function(req,res,next) => {
-//   //    * try {
-//   //    *      const categories = await DB.findAllFor(DB.getEntityConfigurations().categories);
-//   //    *      res.status(200).json(categories);
-//   //    * } catch (error) {
-//   //    *      res.status(400);
-//   //    *      next(new Error(error.message || error));
-//   //    *     }
-//   //    * }
-//   //    *
-//   //    * router.route(/).get(composedFunction)
-//   //    *
-//   //    *
-//   //    *  app.use(/api/categories, )
-//   //    */
-//   //   let error = null;
-//   //   try {
-//   //     EndpointsGenerator.generateEndpointsFor(app, "categories", {});
-//   //   } catch (e) {
-//   //     console.log(e);
-//   //     error = e;
-//   //   }
-//   //   assert.equal(error, null);
-//   //   // check if router was called only twice
-//   //   assert.equal(routerFake.callCount, 1);
-//   //   // check if route was called with correct paths
-//   //   assert.equal(expressRouterStub.route.calledWith("/"), true);
-//   //   // check if route was called with correct paths and method
-//   //   sinon.assert.calledWith(rootRoutesStub.get, sinon.match.func);
-//   //   sinon.assert.calledWith(rootRoutesStub.get, actionFunctionStub);
-//   //   // check if app.use was called exactly once
-//   //   assert.equal(appUseStub.callCount, 1);
-//   // });
+  afterEach(() => {
+    // app = null;
+    // expressRouterSpy = null;
+    // routeSpy = null;
+    appUseSpy = null;
+    expressAppStub = null;
+  });
 
-//   // test if a specific express route method is called
-//   //   it("should throw error when invalid app parameter is passed", () => {
-//   //     let error = null;
-//   //     try {
-//   //       EndpointsGenerator.prepareAppConstruction({ name: "john" });
-//   //     } catch (e) {
-//   //       error = e;
-//   //     }
-//   //     assert.throws(() => {
-//   //       EndpointsGenerator.prepareAppConstruction({ name: "john" });
-//   //     });
-//   //     assert.notEqual(error, null);
-//   //   });
-// });
+  it("should throw error when invalid app parameter is passed", async () => {
+    let error = null;
+    try {
+      await EndpointsGenerator.create({ name: "john" });
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.notEqual(error, null);
+  });
+
+  it("should throw error if no primary entity is found", async () => {
+    let error = null;
+    try {
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.categories);
+
+      await EndpointsGenerator.create(expressAppStub);
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.notEqual(error, null);
+  });
+
+  it("should throw error if more than one primary entity is found", async () => {
+    let error = null;
+    try {
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
+        isPrimaryEntity: true,
+      });
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments, {
+        isPrimaryEntity: true,
+      });
+
+      await EndpointsGenerator.create(expressAppStub);
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.notEqual(error, null);
+  });
+
+  it("should throw error when create is called without first configuring entities", async () => {
+    let error = null;
+    try {
+      await EndpointsGenerator.create(expressAppStub);
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.notEqual(error, null);
+  });
+
+  it("should throw error when using customDB but did not provided any DBModule", async () => {
+    let error = null;
+    try {
+      EndpointsGenerator.useCustomDatabase();
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
+
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
+        isPrimaryEntity: true,
+      });
+
+      await EndpointsGenerator.create(expressAppStub);
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.notEqual(error, null);
+  });
+
+  it("should throw error when using customDB but only provided DBModules for some entities", async () => {
+    let error = null;
+    const usersDbModuleStub = sinon.stub();
+    try {
+      EndpointsGenerator.useCustomDatabase();
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
+
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
+        isPrimaryEntity: true,
+      }).addDBModule(usersDbModuleStub);
+
+      await EndpointsGenerator.create(expressAppStub);
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.notEqual(error, null);
+  });
+
+  it("should create app successfully when provided with custom errorHandler and notFoundHandler middlewares", async () => {
+    let error = null;
+
+    const customErrorHandlerStub = sinon.stub();
+    const customNotFoundStub = sinon.stub();
+
+    try {
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
+        isPrimaryEntity: true,
+      });
+
+      await EndpointsGenerator.create(expressAppStub, {
+        errorHandler: customErrorHandlerStub,
+        notFoundHandler: customNotFoundStub,
+      });
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.equal(error, null);
+    sinon.assert.calledWith(appUseStub, customErrorHandlerStub);
+    sinon.assert.calledWith(appUseStub, customNotFoundStub);
+  });
+
+  it("should create app successfully when provided with initializeApplication callback", async () => {
+    let error = null;
+
+    const initializeAppStub = sinon.stub().returns({});
+    try {
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
+        isPrimaryEntity: true,
+      });
+
+      await EndpointsGenerator.create(expressAppStub, {
+        initializeAppCallback: initializeAppStub,
+      });
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.equal(error, null);
+    sinon.assert.callCount(initializeAppStub, 1);
+  });
+
+  // it("should call router.route with params [/], and appropriate function", () => {
+  //   /* expect app to run:
+  //    *
+  //    * const router = express.router()
+  //    *
+  //    * const composedFunction = async function(req,res,next) => {
+  //    * try {
+  //    *      const categories = await DB.findAllFor(DB.getEntityConfigurations().categories);
+  //    *      res.status(200).json(categories);
+  //    * } catch (error) {
+  //    *      res.status(400);
+  //    *      next(new Error(error.message || error));
+  //    *     }
+  //    * }
+  //    *
+  //    * router.route(/).get(composedFunction)
+  //    *
+  //    *
+  //    *  app.use(/api/categories, )
+  //    */
+  //   let error = null;
+  //   try {
+  //     EndpointsGenerator.generateEndpointsFor(app, "categories", {});
+  //   } catch (e) {
+  //     console.log(e);
+  //     error = e;
+  //   }
+  //   assert.equal(error, null);
+  //   // check if router was called only twice
+  //   assert.equal(routerFake.callCount, 1);
+  //   // check if route was called with correct paths
+  //   assert.equal(expressRouterStub.route.calledWith("/"), true);
+  //   // check if route was called with correct paths and method
+  //   sinon.assert.calledWith(rootRoutesStub.get, sinon.match.func);
+  //   sinon.assert.calledWith(rootRoutesStub.get, actionFunctionStub);
+  //   // check if app.use was called exactly once
+  //   assert.equal(appUseStub.callCount, 1);
+  // });
+
+  // it("should call router.route with params [/], with specified middlewares", () => {
+  //   /* expect app to run:
+  //    *
+  //    * const router = express.router()
+  //    *
+  //    * const composedFunction = async function(req,res,next) => {
+  //    * try {
+  //    *      const categories = await DB.findAllFor(DB.getEntityConfigurations().categories);
+  //    *      res.status(200).json(categories);
+  //    * } catch (error) {
+  //    *      res.status(400);
+  //    *      next(new Error(error.message || error));
+  //    *     }
+  //    * }
+  //    *
+  //    * router.route(/).get(composedFunction)
+  //    *
+  //    *
+  //    *  app.use(/api/categories, )
+  //    */
+  //   let error = null;
+  //   try {
+  //     EndpointsGenerator.generateEndpointsFor(app, "categories", {});
+  //   } catch (e) {
+  //     console.log(e);
+  //     error = e;
+  //   }
+  //   assert.equal(error, null);
+  //   // check if router was called only twice
+  //   assert.equal(routerFake.callCount, 1);
+  //   // check if route was called with correct paths
+  //   assert.equal(expressRouterStub.route.calledWith("/"), true);
+  //   // check if route was called with correct paths and method
+  //   sinon.assert.calledWith(rootRoutesStub.get, sinon.match.func);
+  //   sinon.assert.calledWith(rootRoutesStub.get, actionFunctionStub);
+  //   // check if app.use was called exactly once
+  //   assert.equal(appUseStub.callCount, 1);
+  // });
+
+  // test if a specific express route method is called
+  //   it("should throw error when invalid app parameter is passed", () => {
+  //     let error = null;
+  //     try {
+  //       EndpointsGenerator.prepareAppConstruction({ name: "john" });
+  //     } catch (e) {
+  //       error = e;
+  //     }
+  //     assert.throws(() => {
+  //       EndpointsGenerator.prepareAppConstruction({ name: "john" });
+  //     });
+  //     assert.notEqual(error, null);
+  //   });
+});
