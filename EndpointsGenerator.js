@@ -96,6 +96,9 @@ const moduleFn = function () {
    */
   let entityBeingConfigured = null;
 
+  /*
+    Internal methods
+  */
   const parseEntityOptions = (options) => {
     const { identifierField, isPrimaryEntity, createTokenCb, isAdminCb } =
       options;
@@ -275,8 +278,8 @@ const moduleFn = function () {
 
     if (!useCustomAuth) {
       const primaryEntityConfigs = getPrimaryEntity();
-      console.log("primary entity:");
-      console.log(primaryEntityConfigs);
+      // console.log("primary entity:");
+      // console.log(primaryEntityConfigs);
       const { DBModule, createTokenCb, isAdminCb } = primaryEntityConfigs;
 
       let entityFindSingle = null;
@@ -322,7 +325,7 @@ const moduleFn = function () {
           next();
         } else {
           res.status(401);
-          next(new Error("Not authorized as an admin."));
+          next(new Error("Not authorized as an admin"));
         }
       };
     }
@@ -381,25 +384,26 @@ const moduleFn = function () {
     },
     useCustomAuthMiddlewares: function () {
       if (
-        entityConfigurations &&
-        Object.keys(entityConfigurations).length > 0
+        useCustomAuth ||
+        (entityConfigurations && Object.keys(entityConfigurations).length > 0)
       ) {
         throw new Error(
-          "Module method [useCustomAuthMiddlewares] must only be called ONCE before entity configurations."
+          "Module method [useCustomAuthMiddlewares] must only be called ONCE before entity configurations"
         );
       }
       useCustomAuth = true;
     },
     useCustomDatabase: function () {
       if (
-        entityConfigurations &&
-        Object.keys(entityConfigurations).length > 0
+        useCustomDB ||
+        (entityConfigurations && Object.keys(entityConfigurations).length > 0)
       ) {
         throw new Error(
-          "Module method [useCustomDatabase] must only be called ONCE before entity configurations."
+          "Module method [useCustomDatabase] must only be called ONCE before entity configurations"
         );
       }
       useCustomDB = true;
+      return this;
     },
     /**
      *
@@ -417,12 +421,12 @@ const moduleFn = function () {
     adaptClientDBInterface: function (dbApiMap) {
       if (!useCustomDB) {
         throw new Error(
-          "Module method [adaptClientDBInterface] should not be called if clients do not use a custom database."
+          "Module method [adaptClientDBInterface] should not be called if clients do not use a custom database"
         );
       }
       if (!dbApiMap || Object.keys(dbApiMap).length === 0) {
         throw new Error(
-          "A valid object parameter is required by module method [adaptClientDBInterface]."
+          "A valid object parameter is required by module method [adaptClientDBInterface]"
         );
       }
       let result = {};
@@ -455,13 +459,13 @@ const moduleFn = function () {
     ) {
       if (!entity || entity === "") {
         throw new Error(
-          "Argument parameter [entity] is required for module method [configureEntity]."
+          "Argument parameter [entity] is required for module method [configureEntity]"
         );
       }
       if (useCustomDB) {
         if (!clientDbInterfaceIsAdapted()) {
           throw new Error(
-            "Using custom DB requires the client to first adapt their interface by using module method [adaptClientDBInterface] before configuring entities."
+            "Using custom DB requires the client to first adapt their interface by using module method [adaptClientDBInterface] before configuring entities"
           );
         }
       }
@@ -469,7 +473,7 @@ const moduleFn = function () {
         (entityBeingConfigured && entityBeingConfigured === entity) ||
         entityConfigurations[entity]
       ) {
-        throw new Error("Each entity can only be configured once.");
+        throw new Error("Each entity can only be configured once");
       }
 
       const { idField, isPrimary, createTokenCallback, isAdminCallback } =
@@ -527,13 +531,13 @@ const moduleFn = function () {
       if (useCustomDB) {
         if (!DBModule || !isFunctionOrObject) {
           throw new Error(
-            "Using custom DB requires the client to provide argument [DBModule] as callback or object for each entity."
+            "Using custom DB requires the client to provide argument [DBModule] as callback or object for each entity"
           );
         }
       }
       if (entityConfigurations[entityBeingConfigured].DBModule) {
         throw new Error(
-          "Entities can only be configured with a DB module once."
+          "Entities can only be configured with a DB module once"
         );
       }
       const defaultDBModule = null; // to be replaced with something else

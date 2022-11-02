@@ -90,8 +90,9 @@ describe("Endpoints Generator: using custom database", () => {
     };
     let error = null;
     try {
-      EndpointsGenerator.useCustomDatabase();
-      EndpointsGenerator.adaptClientDBInterface(thirdPartyDatabase);
+      EndpointsGenerator.useCustomDatabase().adaptClientDBInterface(
+        thirdPartyDatabase
+      );
     } catch (e) {
       console.log(e);
       error = e;
@@ -102,8 +103,9 @@ describe("Endpoints Generator: using custom database", () => {
   it("should throw error when called again after configuring entity", () => {
     let error = null;
     try {
-      EndpointsGenerator.useCustomDatabase();
-      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
+      EndpointsGenerator.useCustomDatabase().adaptClientDBInterface(
+        VALID_DB_ADAPTATION
+      );
 
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.categories);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
@@ -139,8 +141,9 @@ describe("Endpoints Generator: Database module adaptation", () => {
     let error = null;
     let result = null;
     try {
-      EndpointsGenerator.useCustomDatabase();
-      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
+      EndpointsGenerator.useCustomDatabase().adaptClientDBInterface(
+        VALID_DB_ADAPTATION
+      );
       result = EndpointsGenerator.getDBInterface();
     } catch (e) {
       console.log(e);
@@ -161,8 +164,9 @@ describe("Endpoints Generator: Database module adaptation", () => {
     let error = null;
     let result = null;
     try {
-      EndpointsGenerator.useCustomDatabase();
-      EndpointsGenerator.adaptClientDBInterface(thirdPartyDatabase);
+      EndpointsGenerator.useCustomDatabase().adaptClientDBInterface(
+        thirdPartyDatabase
+      );
       result = EndpointsGenerator.getDBInterface();
     } catch (e) {
       console.log(e);
@@ -182,8 +186,9 @@ describe("Endpoints Generator: Database module adaptation", () => {
     };
     let error = null;
     try {
-      EndpointsGenerator.useCustomDatabase();
-      EndpointsGenerator.adaptClientDBInterface(thirdPartyDatabase);
+      EndpointsGenerator.useCustomDatabase().adaptClientDBInterface(
+        thirdPartyDatabase
+      );
       result = EndpointsGenerator.getDBInterface();
     } catch (e) {
       console.log(e);
@@ -228,8 +233,9 @@ describe("Endpoints Generator: Entity Configuration", () => {
   it("should throw error when using custom database but trying to configure entity before adapting their interfaces", () => {
     let error = null;
     try {
-      EndpointsGenerator.useCustomDatabase();
-      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.categories);
+      EndpointsGenerator.useCustomDatabase().configureEntity(
+        SAMPLE_ENTITIES.categories
+      );
     } catch (e) {
       console.log(e);
       error = e;
@@ -375,8 +381,9 @@ describe("Endpoints Generator: Configuring Entity DB Modules with method chainin
     let error = null;
     let result = null;
     try {
-      EndpointsGenerator.useCustomDatabase();
-      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
+      EndpointsGenerator.useCustomDatabase().adaptClientDBInterface(
+        VALID_DB_ADAPTATION
+      );
 
       EndpointsGenerator.configureEntity(
         SAMPLE_ENTITIES.categories
@@ -407,8 +414,9 @@ describe("Endpoints Generator: Configuring Entity DB Modules with method chainin
     let error = null;
     let result = null;
     try {
-      EndpointsGenerator.useCustomDatabase();
-      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
+      EndpointsGenerator.useCustomDatabase().adaptClientDBInterface(
+        VALID_DB_ADAPTATION
+      );
 
       EndpointsGenerator.configureEntity(
         SAMPLE_ENTITIES.categories
@@ -446,8 +454,9 @@ describe("Endpoints Generator: Configuring Entity DB Modules with method chainin
     let error = null;
     let result = null;
     try {
-      EndpointsGenerator.useCustomDatabase();
-      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
+      EndpointsGenerator.useCustomDatabase().adaptClientDBInterface(
+        VALID_DB_ADAPTATION
+      );
 
       EndpointsGenerator.configureEntity(
         SAMPLE_ENTITIES.categories
@@ -1228,8 +1237,9 @@ describe("Endpoints Generator: Create App", () => {
   it("should throw error when using customDB but did not provided any DBModule", async () => {
     let error = null;
     try {
-      EndpointsGenerator.useCustomDatabase();
-      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
+      EndpointsGenerator.useCustomDatabase().adaptClientDBInterface(
+        VALID_DB_ADAPTATION
+      );
 
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
@@ -1250,8 +1260,9 @@ describe("Endpoints Generator: Create App", () => {
     let error = null;
     const usersDbModuleStub = sinon.stub();
     try {
-      EndpointsGenerator.useCustomDatabase();
-      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
+      EndpointsGenerator.useCustomDatabase().adaptClientDBInterface(
+        VALID_DB_ADAPTATION
+      );
 
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
@@ -1275,8 +1286,9 @@ describe("Endpoints Generator: Create App", () => {
     const customNotFoundStub = sinon.stub();
 
     try {
-      EndpointsGenerator.useCustomDatabase();
-      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
+      EndpointsGenerator.useCustomDatabase().adaptClientDBInterface(
+        VALID_DB_ADAPTATION
+      );
 
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments).addDBModule(
         SampleObjectDbModuleStub
@@ -1305,8 +1317,9 @@ describe("Endpoints Generator: Create App", () => {
     const dbModuleStub = sinon.stub();
 
     try {
-      EndpointsGenerator.useCustomDatabase();
-      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
+      EndpointsGenerator.useCustomDatabase().adaptClientDBInterface(
+        VALID_DB_ADAPTATION
+      );
 
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments).addDBModule(
         SampleObjectDbModuleStub
@@ -1330,8 +1343,9 @@ describe("Endpoints Generator: Create App", () => {
 
     const initializeAppStub = sinon.stub().returns({});
     try {
-      EndpointsGenerator.useCustomDatabase();
-      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
+      EndpointsGenerator.useCustomDatabase().adaptClientDBInterface(
+        VALID_DB_ADAPTATION
+      );
 
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments).addDBModule(
         SampleObjectDbModuleStub
