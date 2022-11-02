@@ -958,6 +958,46 @@ describe("Endpoints Generator: Extending Entity Routes", () => {
   });
 });
 
+describe("Endpoints Generator: Calling done after configuring an Entity", () => {
+  beforeEach(() => {
+    EndpointsGenerator._resetModule();
+  });
+
+  it("should throw error when done is called without first calling configureEntity", () => {
+    let error = null;
+    try {
+      EndpointsGenerator.done();
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.notEqual(error, null);
+  });
+
+  it("should be successful when called after entity configuration", () => {
+    let error = null;
+    let result = null;
+    const expected = {
+      users: {
+        name: "users",
+        identifierField: "id",
+        isPrimaryEntity: false,
+        isAdminCallback: null,
+      },
+    };
+
+    try {
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users).done();
+      result = EndpointsGenerator.getEntityConfigurations();
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.equal(error, null);
+    assert.deepStrictEqual(expected, result);
+  });
+});
+
 // configure Errorhandler and notFound Middlewares - put as options
 
 // generate endpoints using default route configs

@@ -14,6 +14,9 @@ const {
   stringHasValue,
   objectHasValue,
 } = require("./utils");
+// event emitter
+const events = require("events");
+const EM = new events.EventEmitter();
 
 const ROUTE_METHODS = ["get", "post", "put", "delete"];
 
@@ -330,6 +333,14 @@ const moduleFn = function () {
       entityBeingConfigured = entity;
       return this;
     },
+    done: function () {
+      if (!entityBeingConfigured) {
+        throw new Error(
+          "Module's chain method [done] must be called after entity configuration"
+        );
+      }
+      entityBeingConfigured = null;
+    },
     addDBModule: function (DBModule = null) {
       validateMethodChainEntityForMethod("addDBModule");
       if (useCustomDB) {
@@ -511,7 +522,7 @@ const moduleFn = function () {
         errorHandler: null,
         notFoundHandler: null,
         env: "dev",
-        initializeAppCallback: async function (env) {},
+        initializeAppCallback: async function (env, em) {},
       }
     ) {
       entityBeingConfigured = null;
@@ -544,7 +555,7 @@ const moduleFn = function () {
       const initializeApplication =
         initializeAppCallback && typeof initializeAppCallback === "function"
           ? initializeAppCallback
-          : async function (environment) {};
+          : async function (env, em) {};
       /**
        * Middleware setup
        */
@@ -564,7 +575,7 @@ const moduleFn = function () {
       if (environment === "dev") {
         app.use(morgan("dev"));
       }
-      await initializeApplication(environment);
+      await initializeApplication(environment, EM);
 
       /**
        * Routes generation
@@ -576,6 +587,8 @@ const moduleFn = function () {
        */
       app.use(notFoundMiddleware);
       app.use(errorHandlerMiddleware);
+
+      return EM;
     },
   };
 };
