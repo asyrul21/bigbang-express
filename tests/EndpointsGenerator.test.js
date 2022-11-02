@@ -893,6 +893,71 @@ describe("Endpoints Generator: Configuring Entity Routes", () => {
     assert.equal(error, null);
     assert.deepStrictEqual(expected, result);
   });
+
+  it("should pad route configuration successfully when supplied with configs with incomplete actions", () => {
+    const sampleConfiguration = {
+      [ACTIONS.findMany]: {
+        path: "/",
+        auth: authOptions.false,
+      },
+      [ACTIONS.findById]: {
+        path: "/:id",
+        middlewares: [],
+      },
+    };
+    const expected = {
+      users: {
+        name: "users",
+        identifierField: "id",
+        isPrimaryEntity: true,
+        createTokenCb: createTokenStub,
+        isAdminCb: isAdminStub,
+        routes: {
+          [ACTIONS.findMany]: {
+            path: "/",
+            middlewares: [],
+            auth: authOptions.false,
+          },
+          [ACTIONS.findById]: {
+            path: "/:id",
+            middlewares: [],
+            auth: authOptions.false,
+          },
+          [ACTIONS.createOne]: {
+            path: "/",
+            middlewares: [],
+            auth: authOptions.adminOnly,
+          },
+          [ACTIONS.updateOne]: {
+            path: "/:id",
+            middlewares: [],
+            auth: authOptions.adminOnly,
+          },
+          [ACTIONS.deleteOne]: {
+            path: "/:id",
+            middlewares: [],
+            auth: authOptions.adminOnly,
+          },
+        },
+      },
+    };
+    let error = null;
+    let result = null;
+    try {
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
+        isPrimaryEntity: true,
+        createTokenCb: createTokenStub,
+        isAdminCb: isAdminStub,
+      }).configureRoutes(sampleConfiguration);
+      result = EndpointsGenerator.getEntityConfigurations();
+      console.log(result);
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.equal(error, null);
+    assert.deepStrictEqual(expected, result);
+  });
 });
 
 describe("Endpoints Generator: Extending Entity Routes", () => {

@@ -16,6 +16,7 @@ const {
 } = require("./utils");
 // event emitter
 const events = require("events");
+const { authOptions } = require("./constants/ROUTE_CONFIG_ENUMS");
 const EM = new events.EventEmitter();
 
 const ROUTE_METHODS = ["get", "post", "put", "delete"];
@@ -197,6 +198,20 @@ const moduleFn = function () {
 
   const padRoutesConfigurationsWithDefaults = (config) => {
     let result = { ...config };
+    // pad missing actions
+    Object.keys(DEFAULT_ROUTES_CONFIG).forEach((action) => {
+      if (!Object.keys(result).includes(action)) {
+        const defaultActionConfig = DEFAULT_ROUTES_CONFIG[action];
+        result = {
+          ...result,
+          [action]: {
+            ...defaultActionConfig,
+          },
+        };
+      }
+    });
+
+    // pad missing properties
     Object.keys(config).forEach((action) => {
       const routeActionConfig = config[action];
       // if action config is false, client is omitting the route path.
@@ -344,6 +359,76 @@ const moduleFn = function () {
         extendedRoutes,
         routes: routesConfig,
       } = entityConfig;
+
+      const entityRouter = express.Router();
+      const routesConfigurations =
+        routesConfig && Object.keys(routesConfig).length > 0
+          ? routesConfig
+          : { ...DEFAULT_ROUTES_CONFIG };
+
+      Object.keys(routesConfigurations).forEach((action) => {
+        const actionConfig = routesConfigurations[action];
+        if (actionConfig !== false) {
+          const { path, middlewares, auth } = actionConfig;
+
+          switch (action) {
+            case [ACTIONS.findMany]:
+              const entityFindMany =
+                typeof DBModule === "function"
+                  ? DBModule
+                  : DBModule[adaptedClientDBInterface[ACTIONS.findMany]];
+              // 1. create function
+              const entityFindAllController = async (req, res, next) => {
+                try {
+                  const data = await entityFindMany();
+                  res.status(200).json(data);
+                } catch (error) {
+                  res.status(400);
+                  next(new Error(`Action ${action} on entity ${name} failed.`));
+                }
+              };
+              // 2. compose middlewares
+              let controllerMiddlewares = [];
+              if (
+                useCustomAuth ||
+                auth === authOptions.middlewares ||
+                auth === authOptions.false
+              ) {
+                controllerMiddlewares = [...middlewares];
+              } else {
+                if (auth === authOptions.protected) {
+                  controllerMiddlewares = [defaultReqLogin, ...middlewares];
+                } else if (auth === authOptions.adminOnly) {
+                  controllerMiddlewares = [
+                    defaultReqLogin,
+                    defaultMustBeAdmin,
+                    ...middlewares,
+                  ];
+                }
+              }
+              // 3. compose route
+              router
+                .route(path)
+                .get(...controllerMiddlewares, entityFindAllController);
+              break;
+            case [ACTIONS.findById]:
+              // something
+              break;
+            case [ACTIONS.createOne]:
+              // something
+              break;
+            case [ACTIONS.updateOne]:
+              // something
+              break;
+            case [ACTIONS.deleteOne]:
+              // something
+              break;
+            default:
+              break;
+          }
+        }
+      });
+      app.use(`/api/${name}`, entityRouter);
     });
   };
 
@@ -602,7 +687,7 @@ const moduleFn = function () {
      * @param {Object} routesConfig - specific route configurations based on ACTIONS. Mark false to omit route, or omit the action key to use default implementation
      * @returns void
      *
-     * This method is optional. If client does not provide, routes with be configures using default settings.
+     * This method is optional. If client does not provide, routes will be configured using default settings.
      */
 
     configureRoutes: function (routesConfig = {}) {
