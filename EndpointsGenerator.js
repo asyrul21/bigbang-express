@@ -29,10 +29,65 @@ const moduleFn = function () {
   /**
    * Describe something here
    */
+  let useCustomAuth = false;
+
+  /**
+   * Describe something here
+   */
   let adaptedClientDBInterface = {};
 
   /**
-   * Describe something
+   * Holds all the required information to auto generate application's endpoints
+   *
+   * Eventual structure:
+   *
+   * {
+   *   [entityName]: {
+   *    name: "users",
+   *    identifierField: "id", --> string
+   *    isPrimaryEntity: true, --> boolean
+   *    isAdminCb: null --> null or function, must be function id primaryEntity,
+   *    createTokenCb: null, --> null or function, must be function if primaryEntity,
+   *    DBModule: null, --> null or function
+   *    routes: {
+   *      [ACTIONS.findMany]: {
+   *        path: "/",
+   *        middlewares: [],
+   *        auth: authOptions.false,
+   *      },
+   *      [ACTIONS.findById]: {
+   *        path: "/:id",
+   *        middlewares: [],
+   *        auth: authOptions.false,
+   *      },
+   *      [ACTIONS.createOne]: {
+   *        path: "/",
+   *        middlewares: [],
+   *        auth: authOptions.adminOnly,
+   *      },
+   *      [ACTIONS.updateOne]: {
+   *        path: "/:id",
+   *        middlewares: [],
+   *        auth: authOptions.adminOnly,
+   *      },
+   *      [ACTIONS.deleteOne]: false,
+   *    },
+   *    extendedRoutes: [
+   *      {
+   *        method: "put",
+   *        path: "/:id/test",
+   *        middlewares: [],
+   *        controllerCallback: controllerCbStub1,
+   *      },
+   *      {
+   *        method: "post",
+   *        path: "/:id",
+   *        middlewares: [middlewareStub1, middlewareStub2],
+   *        controllerCallback: controllerCbStub2,
+   *      },
+   *    ],
+   *  },
+   * }
    */
   let entityConfigurations = {};
 
@@ -42,16 +97,19 @@ const moduleFn = function () {
   let entityBeingConfigured = null;
 
   const parseEntityOptions = (options) => {
-    const { identifierField, isPrimaryEntity, isAdminCallback } = options;
+    const { identifierField, isPrimaryEntity, createTokenCb, isAdminCb } =
+      options;
     const idField = stringHasValue(identifierField) ? identifierField : "id";
     const isPrimary = booleanHasValue(isPrimaryEntity)
       ? isPrimaryEntity
       : false;
-    const isAdminCb =
-      isAdminCallback && typeof isAdminCallback === "function"
-        ? isAdminCallback
+    const isAdminCallback =
+      isAdminCb && typeof isAdminCb === "function" ? isAdminCb : null;
+    const createTokenCallback =
+      createTokenCb && typeof createTokenCb === "function"
+        ? createTokenCb
         : null;
-    return { idField, isPrimary, isAdminCb };
+    return { idField, isPrimary, createTokenCallback, isAdminCallback };
   };
 
   const clientDbInterfaceIsAdapted = () => {
@@ -105,13 +163,16 @@ const moduleFn = function () {
     Object.keys(entityConfigurations).forEach((e) => {
       config = entityConfigurations[e];
       entityDbModule = config.DBModule;
-      if (!entityDbModule || typeof entityDbModule !== "function") {
+      const isFunctionOrObject =
+        typeof entityDbModule === "function" ||
+        typeof entityDbModule === "object";
+      if (!entityDbModule || !isFunctionOrObject) {
         invalid.push(e);
       }
     });
     if (invalid.length > 0) {
       throw new Error(
-        `Using Custom Database requires client to provide DBModule callback for all entities. Missing DBModule callbacks found for entities [${invalid.toString()}]`
+        `Using Custom Database requires client to provide DBModule as callback or object for all entities. Missing DBModule(s) found for entities [${invalid.toString()}]`
       );
     }
   };
@@ -205,9 +266,88 @@ const moduleFn = function () {
     });
   };
 
+  const generateApplicationEndpoints = (app, secret, tokenPrefix) => {
+    /**
+     * Compose default Auth middlewares
+     */
+    let defaultReqLogin = null;
+    let defaultMustBeAdmin = null;
+
+    if (!useCustomAuth) {
+      const primaryEntityConfigs = getPrimaryEntity();
+      console.log("primary entity:");
+      console.log(primaryEntityConfigs);
+      const { DBModule, createTokenCb, isAdminCb } = primaryEntityConfigs;
+
+      let entityFindSingle = null;
+      if (typeof DBModule === "function") {
+        entityFindSingle = DBModule;
+      } else {
+        // if object
+        // get the method
+        entityFindSingle = DBModule[adaptedClientDBInterface[ACTIONS.findById]]; // UserModel.findByid
+      }
+
+      defaultReqLogin = async (req, res, next) => {
+        let token;
+        if (
+          req.headers.authorization &&
+          req.headers.authorization.startsWith(tokenPrefix || "Bearer")
+        ) {
+          try {
+            token = req.headers.authorization.split(" ")[1];
+            const decoded = jwt.verify(token, secret);
+            const current = await entityFindSingle(decoded.id); // execute the method here
+            req[primaryEntityConfigs.name] = current;
+            return next();
+          } catch (error) {
+            console.error(error);
+            res.status(401);
+            next(
+              new Error(
+                "Not authorized, token failed. " + (error.message || error)
+              )
+            );
+          }
+        }
+        if (!token) {
+          res.status(401);
+          next(new Error("Not authorized"));
+        }
+      };
+
+      defaultMustBeAdmin = async (req, res, next) => {
+        const current = req[primaryEntityConfigs.name];
+        if (current && isAdminCb(current)) {
+          next();
+        } else {
+          res.status(401);
+          next(new Error("Not authorized as an admin."));
+        }
+      };
+    }
+
+    /**
+     * Populate routes
+     */
+    Object.keys(entityConfigurations).forEach((entity) => {
+      const entityConfig = entityConfigurations[entity];
+      const {
+        name,
+        identifierField,
+        isPrimaryEntity,
+        createTokenCb,
+        DBModule,
+        extendedRoutes,
+        routes: routesConfig,
+      } = entityConfig;
+    });
+  };
+
   return {
     _resetModule: function () {
       useCustomDB = false;
+      useCustomAuth = false;
       adaptedClientDBInterface = {};
       entityConfigurations = {};
       entityBeingConfigured = null;
@@ -239,13 +379,24 @@ const moduleFn = function () {
       }
       return result;
     },
+    useCustomAuthMiddlewares: function () {
+      if (
+        entityConfigurations &&
+        Object.keys(entityConfigurations).length > 0
+      ) {
+        throw new Error(
+          "Module method [useCustomAuthMiddlewares] must only be called ONCE before entity configurations."
+        );
+      }
+      useCustomAuth = true;
+    },
     useCustomDatabase: function () {
       if (
         entityConfigurations &&
         Object.keys(entityConfigurations).length > 0
       ) {
         throw new Error(
-          "Module method [useCustomDatabase] must only be called ONCE."
+          "Module method [useCustomDatabase] must only be called ONCE before entity configurations."
         );
       }
       useCustomDB = true;
@@ -298,7 +449,8 @@ const moduleFn = function () {
       options = {
         identifierField: "id",
         isPrimaryEntity: false,
-        isAdminCallback: null, // () => boolean
+        createTokenCb: null, // (entityObject) => void
+        isAdminCb: null, // (entityObject) => boolean
       }
     ) {
       if (!entity || entity === "") {
@@ -320,14 +472,28 @@ const moduleFn = function () {
         throw new Error("Each entity can only be configured once.");
       }
 
-      const { idField, isPrimary, isAdminCb } = parseEntityOptions(options);
+      const { idField, isPrimary, createTokenCallback, isAdminCallback } =
+        parseEntityOptions(options);
+
+      if (isPrimary && !createTokenCallback) {
+        throw new Error(
+          "Primary entity must provide options of key [createTokenCb] function in module method [configureEntity]"
+        );
+      }
+      if (isPrimary && !isAdminCallback) {
+        throw new Error(
+          "Primary entity must provide options of key [isAdminCb] function in module method [configureEntity]"
+        );
+      }
+
       entityConfigurations = {
         ...entityConfigurations,
         [entity]: {
           name: entity,
           identifierField: idField,
           isPrimaryEntity: isPrimary,
-          isAdminCallback: isAdminCb,
+          createTokenCb: createTokenCallback,
+          isAdminCb: isAdminCallback,
         },
       };
       entityBeingConfigured = entity;
@@ -341,12 +507,27 @@ const moduleFn = function () {
       }
       entityBeingConfigured = null;
     },
+    /**
+     *
+     * @param {Function or Object} DBModule - Module called by third party database based on entity or model
+     * @returns void
+     */
     addDBModule: function (DBModule = null) {
       validateMethodChainEntityForMethod("addDBModule");
+      if (
+        !adaptedClientDBInterface ||
+        Object.keys(adaptedClientDBInterface).length === 0
+      ) {
+        throw new Error(
+          "Implementing custom CB modules require client to first adapt their DB interface using module method [adaptClientDBInterface]"
+        );
+      }
+      const isFunctionOrObject =
+        typeof DBModule === "function" || typeof DBModule === "object";
       if (useCustomDB) {
-        if (!DBModule || typeof DBModule !== "function") {
+        if (!DBModule || !isFunctionOrObject) {
           throw new Error(
-            "Using custom DB requires the client to provide [DBModule] callback for each entity."
+            "Using custom DB requires the client to provide argument [DBModule] as callback or object for each entity."
           );
         }
       }
@@ -360,10 +541,7 @@ const moduleFn = function () {
         ...entityConfigurations,
         [entityBeingConfigured]: {
           ...entityConfigurations[entityBeingConfigured],
-          DBModule:
-            DBModule && typeof DBModule === "function"
-              ? DBModule
-              : defaultDBModule,
+          DBModule: DBModule && isFunctionOrObject ? DBModule : defaultDBModule,
         },
       };
       return this;
@@ -518,11 +696,13 @@ const moduleFn = function () {
 
     create: async function (
       app,
+      jwtSecret,
       middlewareOverrides = {
         errorHandler: null,
         notFoundHandler: null,
         env: "dev",
         initializeAppCallback: async function (env, em) {},
+        tokenHandle: "Bearer",
       }
     ) {
       entityBeingConfigured = null;
@@ -542,6 +722,11 @@ const moduleFn = function () {
           "Invalid parameter provided to module method [create]. Parameter must be an instance of Express module"
         );
       }
+      if (!useCustomAuth && (!jwtSecret || typeof jwtSecret !== "string")) {
+        throw new Error(
+          "Argument parameter [jwtSecret] is required for module method [create] if client intends to use default auth implementations"
+        );
+      }
       validatePrimaryEntity();
       if (useCustomDB) {
         validateAllEntityDBModules();
@@ -549,13 +734,20 @@ const moduleFn = function () {
       /**
        * Param processing
        */
-      const { errorHandler, notFoundHandler, env, initializeAppCallback } =
-        middlewareOverrides;
+      const {
+        errorHandler,
+        notFoundHandler,
+        env,
+        initializeAppCallback,
+        tokenHandle,
+      } = middlewareOverrides;
       const environment = env && typeof env === "string" ? env : "dev";
       const initializeApplication =
         initializeAppCallback && typeof initializeAppCallback === "function"
           ? initializeAppCallback
           : async function (env, em) {};
+      const tokenPrefix =
+        tokenHandle && typeof tokenHandle === "string" ? tokenHandle : "Bearer";
       /**
        * Middleware setup
        */
@@ -578,9 +770,10 @@ const moduleFn = function () {
       await initializeApplication(environment, EM);
 
       /**
-       * Routes generation
+       * Routes generation: Where the magic happens
        */
       // bla bla
+      generateApplicationEndpoints(app, jwtSecret, tokenPrefix);
 
       /**
        * Error middlewares

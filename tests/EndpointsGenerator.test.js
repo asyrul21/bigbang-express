@@ -7,6 +7,8 @@ const ActionFunctionFactory = require("../ActionFunctionFactory");
 const { authOptions } = require("../constants/ROUTE_CONFIG_ENUMS");
 const DEFAULT_ROUTES_CONFIG = require("../constants/DEFAULT_ROUTES_CONFIG");
 
+const sampleJwtSecret = "mySecret";
+
 // dependency handling: either delete dependents or update them to null
 const SAMPLE_ENTITIES = {
   categories: "categories",
@@ -24,10 +26,25 @@ const VALID_DB_ADAPTATION = {
   [ACTIONS.save]: "save",
 };
 
+const createTokenStub = sinon.stub();
+const isAdminStub = sinon.stub();
+
 const mockReq = { req: "requestObject" };
 const mockRes = { res: "responseObject" };
 function mockNext() {}
 
+// db module stubs
+// should have unadapted client interface
+const SampleObjectDbModuleStub = {
+  find: sinon.stub(),
+  findById: sinon.stub(),
+  createNewFor: sinon.stub(),
+  updateFor: sinon.stub(),
+  deleteFor: sinon.stub(),
+  save: sinon.stub(),
+};
+
+// router stubs
 const rootRoutesStub = {
   get: sinon.stub().callsFake(() => rootRoutesStub),
   post: sinon.stub().callsFake(() => rootRoutesStub),
@@ -232,13 +249,40 @@ describe("Endpoints Generator: Entity Configuration", () => {
     assert.notEqual(error, null);
   });
 
+  it("should throw error when entity is primary entity but did not provide createTokenCb callback", () => {
+    let error = null;
+    try {
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
+        isPrimaryEntity: true,
+        isAdminCb: isAdminStub,
+      });
+    } catch (e) {
+      error = e;
+    }
+    assert.notEqual(error, null);
+  });
+
+  it("should throw error when entity is primary entity but did not provide isAdminCb callback", () => {
+    let error = null;
+    try {
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
+        isPrimaryEntity: true,
+        createTokenCb: createTokenStub,
+      });
+    } catch (e) {
+      error = e;
+    }
+    assert.notEqual(error, null);
+  });
+
   it("should configure single entity successfully without options", () => {
     const expectedEntityConfiguration = {
       categories: {
         name: "categories",
         identifierField: "id",
         isPrimaryEntity: false,
-        isAdminCallback: null,
+        createTokenCb: null,
+        isAdminCb: null,
       },
     };
     let error = null;
@@ -254,13 +298,14 @@ describe("Endpoints Generator: Entity Configuration", () => {
   });
 
   it("should configure single entity successfully with options", () => {
-    const adminCbStub = sinon.stub();
+    const createTokenStub = sinon.stub();
     const expectedEntityConfiguration = {
       users: {
         name: "users",
         identifierField: "id",
         isPrimaryEntity: true,
-        isAdminCallback: adminCbStub,
+        createTokenCb: createTokenStub,
+        isAdminCb: isAdminStub,
       },
     };
     let error = null;
@@ -268,7 +313,8 @@ describe("Endpoints Generator: Entity Configuration", () => {
     try {
       EndpointsGenerator.configureEntity("users", {
         isPrimaryEntity: true,
-        isAdminCallback: adminCbStub,
+        createTokenCb: createTokenStub,
+        isAdminCb: isAdminStub,
       });
       result = EndpointsGenerator.getEntityConfigurations();
     } catch (e) {
@@ -284,13 +330,15 @@ describe("Endpoints Generator: Entity Configuration", () => {
         name: "categories",
         identifierField: "id",
         isPrimaryEntity: false,
-        isAdminCallback: null,
+        createTokenCb: null,
+        isAdminCb: null,
       },
       comments: {
         name: "comments",
         identifierField: "id",
         isPrimaryEntity: false,
-        isAdminCallback: null,
+        createTokenCb: null,
+        isAdminCb: null,
       },
     };
     let error = null;
@@ -312,23 +360,59 @@ describe("Endpoints Generator: Configuring Entity DB Modules with method chainin
     EndpointsGenerator._resetModule();
   });
 
-  it("Should add appropriate DB Module to a single entity callback successfully", () => {
+  it("Should add appropriate DB Module to a single entity as callback successfully", () => {
     const entityModuleStub = sinon.stub();
     const expectedEntityConfiguration = {
       categories: {
         name: "categories",
         identifierField: "id",
         isPrimaryEntity: false,
-        isAdminCallback: null,
+        createTokenCb: null,
+        isAdminCb: null,
         DBModule: entityModuleStub,
       },
     };
     let error = null;
     let result = null;
     try {
+      EndpointsGenerator.useCustomDatabase();
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
+
       EndpointsGenerator.configureEntity(
         SAMPLE_ENTITIES.categories
       ).addDBModule(entityModuleStub);
+
+      result = EndpointsGenerator.getEntityConfigurations();
+    } catch (e) {
+      error = e;
+    }
+    assert.equal(error, null);
+    assert.deepStrictEqual(result, expectedEntityConfiguration);
+  });
+
+  it("Should add appropriate DB Module to a single entity as object successfully", () => {
+    const entityModuleObj = {
+      name: "sampleObject",
+    };
+    const expectedEntityConfiguration = {
+      categories: {
+        name: "categories",
+        identifierField: "id",
+        isPrimaryEntity: false,
+        createTokenCb: null,
+        isAdminCb: null,
+        DBModule: entityModuleObj,
+      },
+    };
+    let error = null;
+    let result = null;
+    try {
+      EndpointsGenerator.useCustomDatabase();
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
+
+      EndpointsGenerator.configureEntity(
+        SAMPLE_ENTITIES.categories
+      ).addDBModule(entityModuleObj);
 
       result = EndpointsGenerator.getEntityConfigurations();
     } catch (e) {
@@ -346,20 +430,25 @@ describe("Endpoints Generator: Configuring Entity DB Modules with method chainin
         name: "categories",
         identifierField: "id",
         isPrimaryEntity: false,
-        isAdminCallback: null,
+        createTokenCb: null,
+        isAdminCb: null,
         DBModule: cateogoriesModuleStub,
       },
       comments: {
         name: "comments",
         identifierField: "id",
         isPrimaryEntity: false,
-        isAdminCallback: null,
+        createTokenCb: null,
+        isAdminCb: null,
         DBModule: commentModulesStub,
       },
     };
     let error = null;
     let result = null;
     try {
+      EndpointsGenerator.useCustomDatabase();
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
+
       EndpointsGenerator.configureEntity(
         SAMPLE_ENTITIES.categories
       ).addDBModule(cateogoriesModuleStub);
@@ -461,13 +550,15 @@ describe("Endpoints Generator: Configuring Entity Dependents", () => {
         name: "comments",
         identifierField: "id",
         isPrimaryEntity: false,
-        isAdminCallback: null,
+        createTokenCb: null,
+        isAdminCb: null,
       },
       users: {
         name: "users",
         identifierField: "key",
         isPrimaryEntity: true,
-        isAdminCallback: null,
+        createTokenCb: createTokenStub,
+        isAdminCb: isAdminStub,
         dependents: [
           {
             entity: "comments",
@@ -480,6 +571,8 @@ describe("Endpoints Generator: Configuring Entity Dependents", () => {
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
         isPrimaryEntity: true,
+        createTokenCb: createTokenStub,
+        isAdminCb: isAdminStub,
         identifierField: "key",
       }).addDependents(["comments"]);
 
@@ -500,13 +593,15 @@ describe("Endpoints Generator: Configuring Entity Dependents", () => {
         name: "comments",
         identifierField: "id",
         isPrimaryEntity: false,
-        isAdminCallback: null,
+        createTokenCb: null,
+        isAdminCb: null,
       },
       users: {
         name: "users",
         identifierField: "key",
         isPrimaryEntity: true,
-        isAdminCallback: null,
+        createTokenCb: createTokenStub,
+        isAdminCb: isAdminStub,
         dependents: [
           {
             entity: "comments",
@@ -520,6 +615,8 @@ describe("Endpoints Generator: Configuring Entity Dependents", () => {
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
         isPrimaryEntity: true,
         identifierField: "key",
+        createTokenCb: createTokenStub,
+        isAdminCb: isAdminStub,
       }).addDependents([
         {
           entity: "comments",
@@ -643,7 +740,8 @@ describe("Endpoints Generator: Configuring Entity Routes", () => {
         name: "users",
         identifierField: "id",
         isPrimaryEntity: true,
-        isAdminCallback: null,
+        createTokenCb: createTokenStub,
+        isAdminCb: isAdminStub,
         routes: {
           ...DEFAULT_ROUTES_CONFIG,
         },
@@ -652,6 +750,8 @@ describe("Endpoints Generator: Configuring Entity Routes", () => {
     try {
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
         isPrimaryEntity: true,
+        createTokenCb: createTokenStub,
+        isAdminCb: isAdminStub,
       }).configureRoutes();
       result = EndpointsGenerator.getEntityConfigurations();
     } catch (e) {
@@ -695,7 +795,8 @@ describe("Endpoints Generator: Configuring Entity Routes", () => {
         name: "users",
         identifierField: "id",
         isPrimaryEntity: true,
-        isAdminCallback: null,
+        createTokenCb: createTokenStub,
+        isAdminCb: isAdminStub,
         routes: {
           ...sampleConfiguration,
         },
@@ -706,6 +807,8 @@ describe("Endpoints Generator: Configuring Entity Routes", () => {
     try {
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
         isPrimaryEntity: true,
+        createTokenCb: createTokenStub,
+        isAdminCb: isAdminStub,
       }).configureRoutes(sampleConfiguration);
       result = EndpointsGenerator.getEntityConfigurations();
     } catch (e) {
@@ -738,7 +841,8 @@ describe("Endpoints Generator: Configuring Entity Routes", () => {
         name: "users",
         identifierField: "id",
         isPrimaryEntity: true,
-        isAdminCallback: null,
+        createTokenCb: createTokenStub,
+        isAdminCb: isAdminStub,
         routes: {
           [ACTIONS.findMany]: {
             path: "/",
@@ -769,6 +873,8 @@ describe("Endpoints Generator: Configuring Entity Routes", () => {
     try {
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
         isPrimaryEntity: true,
+        createTokenCb: createTokenStub,
+        isAdminCb: isAdminStub,
       }).configureRoutes(sampleConfiguration);
       result = EndpointsGenerator.getEntityConfigurations();
     } catch (e) {
@@ -878,7 +984,8 @@ describe("Endpoints Generator: Extending Entity Routes", () => {
         name: "users",
         identifierField: "id",
         isPrimaryEntity: true,
-        isAdminCallback: null,
+        isAdminCb: isAdminStub,
+        createTokenCb: createTokenStub,
         extendedRoutes: [
           {
             method: "put",
@@ -893,6 +1000,8 @@ describe("Endpoints Generator: Extending Entity Routes", () => {
     try {
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
         isPrimaryEntity: true,
+        createTokenCb: createTokenStub,
+        isAdminCb: isAdminStub,
       }).extendRoutesWith("put", "/:id/test", [], controllerCbStub);
 
       result = EndpointsGenerator.getEntityConfigurations();
@@ -918,7 +1027,8 @@ describe("Endpoints Generator: Extending Entity Routes", () => {
         name: "users",
         identifierField: "id",
         isPrimaryEntity: true,
-        isAdminCallback: null,
+        createTokenCb: createTokenStub,
+        isAdminCb: isAdminStub,
         extendedRoutes: [
           {
             method: "put",
@@ -939,6 +1049,8 @@ describe("Endpoints Generator: Extending Entity Routes", () => {
     try {
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
         isPrimaryEntity: true,
+        createTokenCb: createTokenStub,
+        isAdminCb: isAdminStub,
       })
         .extendRoutesWith("put", "/:id/test", [], controllerCbStub1)
         .extendRoutesWith(
@@ -982,7 +1094,8 @@ describe("Endpoints Generator: Calling done after configuring an Entity", () => 
         name: "users",
         identifierField: "id",
         isPrimaryEntity: false,
-        isAdminCallback: null,
+        createTokenCb: null,
+        isAdminCb: null,
       },
     };
 
@@ -1041,10 +1154,23 @@ describe("Endpoints Generator: Create App", () => {
     expressAppStub = null;
   });
 
+  it("should throw error when jwtSecret is missing and not using custom auth middlewares", async () => {
+    let error = null;
+    try {
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
+      await EndpointsGenerator.create(expressAppStub);
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.notEqual(error, null);
+  });
+
   it("should throw error when invalid app parameter is passed", async () => {
     let error = null;
     try {
-      await EndpointsGenerator.create({ name: "john" });
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
+      await EndpointsGenerator.create({ name: "john" }, sampleJwtSecret);
     } catch (e) {
       console.log(e);
       error = e;
@@ -1058,7 +1184,7 @@ describe("Endpoints Generator: Create App", () => {
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.categories);
 
-      await EndpointsGenerator.create(expressAppStub);
+      await EndpointsGenerator.create(expressAppStub, sampleJwtSecret);
     } catch (e) {
       console.log(e);
       error = e;
@@ -1071,12 +1197,16 @@ describe("Endpoints Generator: Create App", () => {
     try {
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
         isPrimaryEntity: true,
+        isAdminCb: isAdminStub,
+        createTokenCb: createTokenStub,
       });
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments, {
         isPrimaryEntity: true,
+        isAdminCb: isAdminStub,
+        createTokenCb: createTokenStub,
       });
 
-      await EndpointsGenerator.create(expressAppStub);
+      await EndpointsGenerator.create(expressAppStub, sampleJwtSecret);
     } catch (e) {
       console.log(e);
       error = e;
@@ -1087,7 +1217,7 @@ describe("Endpoints Generator: Create App", () => {
   it("should throw error when create is called without first configuring entities", async () => {
     let error = null;
     try {
-      await EndpointsGenerator.create(expressAppStub);
+      await EndpointsGenerator.create(expressAppStub, sampleJwtSecret);
     } catch (e) {
       console.log(e);
       error = e;
@@ -1104,9 +1234,11 @@ describe("Endpoints Generator: Create App", () => {
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
         isPrimaryEntity: true,
+        isAdminCb: isAdminStub,
+        createTokenCb: createTokenStub,
       });
 
-      await EndpointsGenerator.create(expressAppStub);
+      await EndpointsGenerator.create(expressAppStub, sampleJwtSecret);
     } catch (e) {
       console.log(e);
       error = e;
@@ -1124,9 +1256,11 @@ describe("Endpoints Generator: Create App", () => {
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
         isPrimaryEntity: true,
+        isAdminCb: isAdminStub,
+        createTokenCb: createTokenStub,
       }).addDBModule(usersDbModuleStub);
 
-      await EndpointsGenerator.create(expressAppStub);
+      await EndpointsGenerator.create(expressAppStub, sampleJwtSecret);
     } catch (e) {
       console.log(e);
       error = e;
@@ -1134,19 +1268,26 @@ describe("Endpoints Generator: Create App", () => {
     assert.notEqual(error, null);
   });
 
-  it("should create app successfully when provided with custom errorHandler and notFoundHandler middlewares", async () => {
+  it("should create app successfully when provided with custom errorHandler and notFoundHandler middlewares with Object DB Module", async () => {
     let error = null;
 
     const customErrorHandlerStub = sinon.stub();
     const customNotFoundStub = sinon.stub();
 
     try {
-      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
+      EndpointsGenerator.useCustomDatabase();
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
+
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments).addDBModule(
+        SampleObjectDbModuleStub
+      );
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
         isPrimaryEntity: true,
-      });
+        isAdminCb: isAdminStub,
+        createTokenCb: createTokenStub,
+      }).addDBModule(SampleObjectDbModuleStub);
 
-      await EndpointsGenerator.create(expressAppStub, {
+      await EndpointsGenerator.create(expressAppStub, sampleJwtSecret, {
         errorHandler: customErrorHandlerStub,
         notFoundHandler: customNotFoundStub,
       });
@@ -1159,17 +1300,49 @@ describe("Endpoints Generator: Create App", () => {
     sinon.assert.calledWith(appUseStub, customNotFoundStub);
   });
 
+  it("should create app successfully when configured with Function DB Module", async () => {
+    let error = null;
+    const dbModuleStub = sinon.stub();
+
+    try {
+      EndpointsGenerator.useCustomDatabase();
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
+
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments).addDBModule(
+        SampleObjectDbModuleStub
+      );
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
+        isPrimaryEntity: true,
+        isAdminCb: isAdminStub,
+        createTokenCb: createTokenStub,
+      }).addDBModule(dbModuleStub);
+
+      await EndpointsGenerator.create(expressAppStub, sampleJwtSecret);
+    } catch (e) {
+      console.log(e);
+      error = e;
+    }
+    assert.equal(error, null);
+  });
+
   it("should create app successfully when provided with initializeApplication callback", async () => {
     let error = null;
 
     const initializeAppStub = sinon.stub().returns({});
     try {
-      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
+      EndpointsGenerator.useCustomDatabase();
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
+
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments).addDBModule(
+        SampleObjectDbModuleStub
+      );
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
         isPrimaryEntity: true,
-      });
+        isAdminCb: isAdminStub,
+        createTokenCb: createTokenStub,
+      }).addDBModule(SampleObjectDbModuleStub);
 
-      await EndpointsGenerator.create(expressAppStub, {
+      await EndpointsGenerator.create(expressAppStub, sampleJwtSecret, {
         initializeAppCallback: initializeAppStub,
       });
     } catch (e) {
