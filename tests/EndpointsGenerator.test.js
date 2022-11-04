@@ -77,73 +77,16 @@ sinon
   .stub(ActionFunctionFactory, "getFunctionForAction")
   .callsFake(() => actionFunctionStub);
 
-describe("Endpoints Generator: using custom database", () => {
-  beforeEach(() => {
-    EndpointsGenerator._resetModule();
-  });
-
-  it("should throw error if client only adapted their DB interface partially", () => {
-    const thirdPartyDatabase = {
-      [ACTIONS.findMany]: "find",
-      [ACTIONS.deleteOne]: "deleteFor",
-      [ACTIONS.save]: "save",
-    };
-    let error = null;
-    try {
-      EndpointsGenerator.useCustomDatabase().adaptClientDBInterface(
-        thirdPartyDatabase
-      );
-    } catch (e) {
-      console.log(e);
-      error = e;
-    }
-    assert.notEqual(error, null);
-  });
-
-  it("should throw error when called again after configuring entity", () => {
-    let error = null;
-    try {
-      EndpointsGenerator.useCustomDatabase().adaptClientDBInterface(
-        VALID_DB_ADAPTATION
-      );
-
-      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.categories);
-      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
-      EndpointsGenerator.useCustomDatabase();
-    } catch (e) {
-      console.log(e);
-      error = e;
-    }
-    assert.notEqual(error, null);
-  });
-});
-
 describe("Endpoints Generator: Database module adaptation", () => {
   beforeEach(() => {
     EndpointsGenerator._resetModule();
-  });
-
-  it("should throw error when useCustomDatabase was not called", () => {
-    let error = null;
-    try {
-      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
-    } catch (e) {
-      console.log(e);
-      error = e;
-    }
-    assert.throws(() => {
-      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
-    });
-    assert.notEqual(error, null);
   });
 
   it("should adapt module methods correctly when all api's are provided", () => {
     let error = null;
     let result = null;
     try {
-      EndpointsGenerator.useCustomDatabase().adaptClientDBInterface(
-        VALID_DB_ADAPTATION
-      );
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       result = EndpointsGenerator.getDBInterface();
     } catch (e) {
       console.log(e);
@@ -164,9 +107,7 @@ describe("Endpoints Generator: Database module adaptation", () => {
     let error = null;
     let result = null;
     try {
-      EndpointsGenerator.useCustomDatabase().adaptClientDBInterface(
-        thirdPartyDatabase
-      );
+      EndpointsGenerator.adaptClientDBInterface(thirdPartyDatabase);
       result = EndpointsGenerator.getDBInterface();
     } catch (e) {
       console.log(e);
@@ -186,9 +127,7 @@ describe("Endpoints Generator: Database module adaptation", () => {
     };
     let error = null;
     try {
-      EndpointsGenerator.useCustomDatabase().adaptClientDBInterface(
-        thirdPartyDatabase
-      );
+      EndpointsGenerator.adaptClientDBInterface(thirdPartyDatabase);
       result = EndpointsGenerator.getDBInterface();
     } catch (e) {
       console.log(e);
@@ -214,6 +153,7 @@ describe("Endpoints Generator: Getting Entity Names", () => {
     let error = null;
     let result = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.categories);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
       result = EndpointsGenerator.getEntityNames();
@@ -230,12 +170,10 @@ describe("Endpoints Generator: Entity Configuration", () => {
     EndpointsGenerator._resetModule();
   });
 
-  it("should throw error when using custom database but trying to configure entity before adapting their interfaces", () => {
+  it("should throw error configuring entity before adapting their interfaces", () => {
     let error = null;
     try {
-      EndpointsGenerator.useCustomDatabase().configureEntity(
-        SAMPLE_ENTITIES.categories
-      );
+      EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.categories);
     } catch (e) {
       console.log(e);
       error = e;
@@ -246,6 +184,7 @@ describe("Endpoints Generator: Entity Configuration", () => {
   it("should throw error when configuring single entity twice callback", () => {
     let error = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.categories);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.categories);
     } catch (e) {
@@ -258,6 +197,7 @@ describe("Endpoints Generator: Entity Configuration", () => {
   it("should throw error when entity is primary entity but did not provide createTokenCb callback", () => {
     let error = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
         isPrimaryEntity: true,
         isAdminCb: isAdminStub,
@@ -271,6 +211,7 @@ describe("Endpoints Generator: Entity Configuration", () => {
   it("should throw error when entity is primary entity but did not provide isAdminCb callback", () => {
     let error = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
         isPrimaryEntity: true,
         createTokenCb: createTokenStub,
@@ -294,6 +235,7 @@ describe("Endpoints Generator: Entity Configuration", () => {
     let error = null;
     let result = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.categories);
       result = EndpointsGenerator.getEntityConfigurations();
     } catch (e) {
@@ -317,6 +259,7 @@ describe("Endpoints Generator: Entity Configuration", () => {
     let error = null;
     let result = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity("users", {
         isPrimaryEntity: true,
         createTokenCb: createTokenStub,
@@ -350,6 +293,7 @@ describe("Endpoints Generator: Entity Configuration", () => {
     let error = null;
     let result = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.categories);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
       result = EndpointsGenerator.getEntityConfigurations();
@@ -381,10 +325,7 @@ describe("Endpoints Generator: Configuring Entity DB Modules with method chainin
     let error = null;
     let result = null;
     try {
-      EndpointsGenerator.useCustomDatabase().adaptClientDBInterface(
-        VALID_DB_ADAPTATION
-      );
-
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(
         SAMPLE_ENTITIES.categories
       ).addDBModule(entityModuleStub);
@@ -414,10 +355,7 @@ describe("Endpoints Generator: Configuring Entity DB Modules with method chainin
     let error = null;
     let result = null;
     try {
-      EndpointsGenerator.useCustomDatabase().adaptClientDBInterface(
-        VALID_DB_ADAPTATION
-      );
-
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(
         SAMPLE_ENTITIES.categories
       ).addDBModule(entityModuleObj);
@@ -454,10 +392,7 @@ describe("Endpoints Generator: Configuring Entity DB Modules with method chainin
     let error = null;
     let result = null;
     try {
-      EndpointsGenerator.useCustomDatabase().adaptClientDBInterface(
-        VALID_DB_ADAPTATION
-      );
-
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(
         SAMPLE_ENTITIES.categories
       ).addDBModule(cateogoriesModuleStub);
@@ -478,6 +413,7 @@ describe("Endpoints Generator: Configuring Entity DB Modules with method chainin
     const entityModuleStub = sinon.stub();
     let error = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.addDBModule(entityModuleStub);
     } catch (e) {
       console.log(e);
@@ -495,6 +431,7 @@ describe("Endpoints Generator: Configuring Entity Dependents", () => {
   it("should throw error when addDependents is called without first calling configureEntity", () => {
     let error = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.addDependents("categories");
     } catch (e) {
       console.log(e);
@@ -506,6 +443,7 @@ describe("Endpoints Generator: Configuring Entity Dependents", () => {
   it("should throw error when passing invalid string entity in dependents array", () => {
     let error = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users).addDependents([
         "johny",
@@ -520,6 +458,7 @@ describe("Endpoints Generator: Configuring Entity Dependents", () => {
   it("should throw error when passing object with invalid entity in dependents array", () => {
     let error = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users).addDependents([
         {
@@ -537,6 +476,7 @@ describe("Endpoints Generator: Configuring Entity Dependents", () => {
   it("should throw error when passing object with invalid structure in dependents array", () => {
     let error = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users).addDependents([
         {
@@ -577,6 +517,7 @@ describe("Endpoints Generator: Configuring Entity Dependents", () => {
       },
     };
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
         isPrimaryEntity: true,
@@ -620,6 +561,7 @@ describe("Endpoints Generator: Configuring Entity Dependents", () => {
       },
     };
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
         isPrimaryEntity: true,
@@ -650,6 +592,7 @@ describe("Endpoints Generator: Configuring Entity Routes", () => {
   it("should throw error when configureRoutes is called without first calling configureEntity", () => {
     let error = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureRoutes("categories", {
         sample: "test",
       });
@@ -670,6 +613,7 @@ describe("Endpoints Generator: Configuring Entity Routes", () => {
     };
     let error = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity("categories").configureRoutes(
         sampleConfiguration
       );
@@ -690,6 +634,7 @@ describe("Endpoints Generator: Configuring Entity Routes", () => {
     };
     let error = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity("categories").configureRoutes(
         sampleConfiguration
       );
@@ -710,6 +655,7 @@ describe("Endpoints Generator: Configuring Entity Routes", () => {
     };
     let error = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity("categories").configureRoutes(
         sampleConfiguration
       );
@@ -730,6 +676,7 @@ describe("Endpoints Generator: Configuring Entity Routes", () => {
     };
     let error = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity("categories").configureRoutes(
         sampleConfiguration
       );
@@ -757,6 +704,7 @@ describe("Endpoints Generator: Configuring Entity Routes", () => {
       },
     };
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
         isPrimaryEntity: true,
         createTokenCb: createTokenStub,
@@ -814,6 +762,7 @@ describe("Endpoints Generator: Configuring Entity Routes", () => {
     let error = null;
     let result = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
         isPrimaryEntity: true,
         createTokenCb: createTokenStub,
@@ -880,6 +829,7 @@ describe("Endpoints Generator: Configuring Entity Routes", () => {
     let error = null;
     let result = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
         isPrimaryEntity: true,
         createTokenCb: createTokenStub,
@@ -944,13 +894,13 @@ describe("Endpoints Generator: Configuring Entity Routes", () => {
     let error = null;
     let result = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
         isPrimaryEntity: true,
         createTokenCb: createTokenStub,
         isAdminCb: isAdminStub,
       }).configureRoutes(sampleConfiguration);
       result = EndpointsGenerator.getEntityConfigurations();
-      console.log(result);
     } catch (e) {
       console.log(e);
       error = e;
@@ -968,6 +918,7 @@ describe("Endpoints Generator: Extending Entity Routes", () => {
   it("should throw error when extendRoutesWith is called without first calling configureEntity", () => {
     let error = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.extendRoutesWith("get", "/", [], (req, res) => {
         return true;
       });
@@ -981,6 +932,7 @@ describe("Endpoints Generator: Extending Entity Routes", () => {
   it("should throw error when extendRoutesWith is called with invalid method value", () => {
     let error = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity("users").extendRoutesWith(
         "Johny",
         "/",
@@ -999,6 +951,7 @@ describe("Endpoints Generator: Extending Entity Routes", () => {
   it("should throw error when extendRoutesWith is called with invalid path value", () => {
     let error = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity("users").extendRoutesWith(
         "get",
         1234,
@@ -1017,6 +970,7 @@ describe("Endpoints Generator: Extending Entity Routes", () => {
   it("should throw error when extendRoutesWith is called with invalid middlewares value", () => {
     let error = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity("users").extendRoutesWith(
         "get",
         "/",
@@ -1035,6 +989,7 @@ describe("Endpoints Generator: Extending Entity Routes", () => {
   it("should throw error when extendRoutesWith is called with invalid controllerCallback value", () => {
     let error = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity("users").extendRoutesWith(
         "get",
         "/",
@@ -1072,6 +1027,7 @@ describe("Endpoints Generator: Extending Entity Routes", () => {
     };
 
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
         isPrimaryEntity: true,
         createTokenCb: createTokenStub,
@@ -1121,6 +1077,7 @@ describe("Endpoints Generator: Extending Entity Routes", () => {
     };
 
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
         isPrimaryEntity: true,
         createTokenCb: createTokenStub,
@@ -1152,6 +1109,7 @@ describe("Endpoints Generator: Calling done after configuring an Entity", () => 
   it("should throw error when done is called without first calling configureEntity", () => {
     let error = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.done();
     } catch (e) {
       console.log(e);
@@ -1174,6 +1132,7 @@ describe("Endpoints Generator: Calling done after configuring an Entity", () => 
     };
 
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users).done();
       result = EndpointsGenerator.getEntityConfigurations();
     } catch (e) {
@@ -1231,6 +1190,7 @@ describe("Endpoints Generator: Create App", () => {
   it("should throw error when jwtSecret is missing and not using custom auth middlewares", async () => {
     let error = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
       await EndpointsGenerator.create(expressAppStub);
     } catch (e) {
@@ -1243,6 +1203,7 @@ describe("Endpoints Generator: Create App", () => {
   it("should throw error when invalid app parameter is passed", async () => {
     let error = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
       await EndpointsGenerator.create({ name: "john" }, sampleJwtSecret);
     } catch (e) {
@@ -1255,6 +1216,7 @@ describe("Endpoints Generator: Create App", () => {
   it("should throw error if no primary entity is found", async () => {
     let error = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.categories);
 
@@ -1269,6 +1231,7 @@ describe("Endpoints Generator: Create App", () => {
   it("should throw error if more than one primary entity is found", async () => {
     let error = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
         isPrimaryEntity: true,
         isAdminCb: isAdminStub,
@@ -1291,6 +1254,7 @@ describe("Endpoints Generator: Create App", () => {
   it("should throw error when create is called without first configuring entities", async () => {
     let error = null;
     try {
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       await EndpointsGenerator.create(expressAppStub, sampleJwtSecret);
     } catch (e) {
       console.log(e);
@@ -1299,13 +1263,10 @@ describe("Endpoints Generator: Create App", () => {
     assert.notEqual(error, null);
   });
 
-  it("should throw error when using customDB but did not provided any DBModule", async () => {
+  it("should throw error when entities are not provided any DBModule", async () => {
     let error = null;
     try {
-      EndpointsGenerator.useCustomDatabase().adaptClientDBInterface(
-        VALID_DB_ADAPTATION
-      );
-
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
         isPrimaryEntity: true,
@@ -1321,14 +1282,11 @@ describe("Endpoints Generator: Create App", () => {
     assert.notEqual(error, null);
   });
 
-  it("should throw error when using customDB but only provided DBModules for some entities", async () => {
+  it("should throw error when only providing DBModules for some entities", async () => {
     let error = null;
     const usersDbModuleStub = sinon.stub();
     try {
-      EndpointsGenerator.useCustomDatabase().adaptClientDBInterface(
-        VALID_DB_ADAPTATION
-      );
-
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.users, {
         isPrimaryEntity: true,
@@ -1351,10 +1309,7 @@ describe("Endpoints Generator: Create App", () => {
     const customNotFoundStub = sinon.stub();
 
     try {
-      EndpointsGenerator.useCustomDatabase().adaptClientDBInterface(
-        VALID_DB_ADAPTATION
-      );
-
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments).addDBModule(
         SampleObjectDbModuleStub
       );
@@ -1382,10 +1337,7 @@ describe("Endpoints Generator: Create App", () => {
     const dbModuleStub = sinon.stub();
 
     try {
-      EndpointsGenerator.useCustomDatabase().adaptClientDBInterface(
-        VALID_DB_ADAPTATION
-      );
-
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments).addDBModule(
         SampleObjectDbModuleStub
       );
@@ -1408,10 +1360,7 @@ describe("Endpoints Generator: Create App", () => {
 
     const initializeAppStub = sinon.stub().returns({});
     try {
-      EndpointsGenerator.useCustomDatabase().adaptClientDBInterface(
-        VALID_DB_ADAPTATION
-      );
-
+      EndpointsGenerator.adaptClientDBInterface(VALID_DB_ADAPTATION);
       EndpointsGenerator.configureEntity(SAMPLE_ENTITIES.comments).addDBModule(
         SampleObjectDbModuleStub
       );

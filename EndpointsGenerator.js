@@ -25,11 +25,6 @@ const moduleFn = function () {
   /**
    * Describe something here
    */
-  let useCustomDB = false;
-
-  /**
-   * Describe something here
-   */
   let useCustomAuth = false;
 
   /**
@@ -176,7 +171,7 @@ const moduleFn = function () {
     });
     if (invalid.length > 0) {
       throw new Error(
-        `Using Custom Database requires client to provide DBModule as callback or object for all entities. Missing DBModule(s) found for entities [${invalid.toString()}]`
+        `Clients must provide DBModules as function or object for all entities. Missing DBModule(s) found for entities [${invalid.toString()}]`
       );
     }
   };
@@ -434,7 +429,6 @@ const moduleFn = function () {
 
   return {
     _resetModule: function () {
-      useCustomDB = false;
       useCustomAuth = false;
       adaptedClientDBInterface = {};
       entityConfigurations = {};
@@ -478,18 +472,6 @@ const moduleFn = function () {
       }
       useCustomAuth = true;
     },
-    useCustomDatabase: function () {
-      if (
-        useCustomDB ||
-        (entityConfigurations && Object.keys(entityConfigurations).length > 0)
-      ) {
-        throw new Error(
-          "Module method [useCustomDatabase] must only be called ONCE before entity configurations"
-        );
-      }
-      useCustomDB = true;
-      return this;
-    },
     /**
      *
      * @param {Object} dbApiMap : an object with module actions as keys, and correspoing client database's api method name.
@@ -504,11 +486,6 @@ const moduleFn = function () {
      * }
      */
     adaptClientDBInterface: function (dbApiMap) {
-      if (!useCustomDB) {
-        throw new Error(
-          "Module method [adaptClientDBInterface] should not be called if clients do not use a custom database"
-        );
-      }
       if (!dbApiMap || Object.keys(dbApiMap).length === 0) {
         throw new Error(
           "A valid object parameter is required by module method [adaptClientDBInterface]"
@@ -547,12 +524,10 @@ const moduleFn = function () {
           "Argument parameter [entity] is required for module method [configureEntity]"
         );
       }
-      if (useCustomDB) {
-        if (!clientDbInterfaceIsAdapted()) {
-          throw new Error(
-            "Using custom DB requires the client to first adapt their interface by using module method [adaptClientDBInterface] before configuring entities"
-          );
-        }
+      if (!clientDbInterfaceIsAdapted()) {
+        throw new Error(
+          "Module method [configureEntity] must be called AFTER client has adapted their DB interface using module method [adaptClientDBInterface]"
+        );
       }
       if (
         (entityBeingConfigured && entityBeingConfigured === entity) ||
@@ -608,17 +583,16 @@ const moduleFn = function () {
         Object.keys(adaptedClientDBInterface).length === 0
       ) {
         throw new Error(
-          "Implementing custom CB modules require client to first adapt their DB interface using module method [adaptClientDBInterface]"
+          "Module method [addDBModule] requires client to first adapt their DB interface using module method [adaptClientDBInterface]"
         );
       }
       const isFunctionOrObject =
         typeof DBModule === "function" || typeof DBModule === "object";
-      if (useCustomDB) {
-        if (!DBModule || !isFunctionOrObject) {
-          throw new Error(
-            "Using custom DB requires the client to provide argument [DBModule] as callback or object for each entity"
-          );
-        }
+
+      if (!DBModule || !isFunctionOrObject) {
+        throw new Error(
+          "Module method [addDBModule] requires argument [DBModule] of type function or object"
+        );
       }
       if (entityConfigurations[entityBeingConfigured].DBModule) {
         throw new Error(
@@ -817,9 +791,7 @@ const moduleFn = function () {
         );
       }
       validatePrimaryEntity();
-      if (useCustomDB) {
-        validateAllEntityDBModules();
-      }
+      validateAllEntityDBModules();
       /**
        * Param processing
        */
