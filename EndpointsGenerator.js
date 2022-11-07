@@ -571,6 +571,17 @@ const moduleFn = function () {
       }
       entityBeingConfigured = null;
     },
+    /*
+      Clients can pass and object: bbx.configureEntity("users").addDBModule(UserModel)
+
+      or
+
+      Clients can pass as function like this: bbx.configureEntity("users").addDBModule((...params) => {
+        // might need to find a way to generalize this line below
+        // or make a wrapper with adapted interface
+        return JsonCryptDB.FindAllFor("users", ...params)
+      })
+    */
     /**
      *
      * @param {Function or Object} DBModule - Module called by third party database based on entity or model
